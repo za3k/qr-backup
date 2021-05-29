@@ -1,0 +1,273 @@
+#!/usr/bin/env python3
+"""
+Takes a binary file, and outputs a "paper backup": a printable pdf full of QR codes. 
+
+Following the directions in the pdf, the QR codes can be re-scanned or photographed using a webcame to restore the original file.
+
+Requirements to make the PDF: python 'qrcode' library, imagemagick, img2pdf
+Requirements to restore from the PDF: zbar (only)
+"""
+
+import hashlib, logging, math, os, subprocess, sys, qrcode
+
+HELP='''Usage: qr-codes.py [OPTIONS] FILE
+Convert a binary file to a paper .pdf backup of QR codes.
+
+The QR codes can be read back with a scanner or webcam to re-create the original file. Directions are included in the PDF. Make sure to test that you can actually read the QR size you select.
+
+    --dpi DPI
+        Sets the print resolution of your printer. Default: 300
+    --error-correction CORRECTION
+        Sets the error correction level. Options are L, M, Q, and H. Default: M (25%)
+    --filename FILENAME
+        Set the restored filename. Max 32 chars. Default: same as <FILE>
+    --page WIDTH_INCH HEIGHT_INCH
+        Sets the usable size of the paper on your printer. This should NOT be 8.5 x 11 -- make sure to include margins. Default: 7 x 9
+    --qr-version VERSION
+        Uses QR codes, version VERSION. Versions range from 1-40. The bigger the version, the harder to scan but the more data per code. Default: 10
+    --scale SCALE
+        Scale QR codes so that each small square in the QR code is SCALE x SCALE pixels. Default: 8
+    --verbose, -v
+        Print more detailed information during run
+
+The QR mode is always binary, and QR compression is always disabled.
+
+The output is named <FILE>.qr.pdf'''
+
+L = qrcode.constants.ERROR_CORRECT_L
+M = qrcode.constants.ERROR_CORRECT_M # default, 25%
+Q = qrcode.constants.ERROR_CORRECT_Q
+H = qrcode.constants.ERROR_CORRECT_H
+
+VERSIONS = {
+    # Binary bytes for each version size, 1-40
+    # Source: qrcode.com (DENSO WAVE)
+    # Order is L,M,Q,H on right
+    1: [17,14,11,7],
+    2: [32,26,20,14],
+    3: [53,42,32,24],
+    4: [78,62,46,34],
+    5: [106,84,60,44],
+    6: [134,106,74,58],
+    7: [154,122,86,64],
+    8: [192,152,108,84],
+    9: [230,180,130,98],
+    10: [271,213,151,119],
+    11: [321,251,177,137],
+    12: [367,287,203,155],
+    13: [425,331,241,177],
+    14: [458,362,258,194],
+    15: [520,412,292,220],
+    16: [586,450,322,250],
+    17: [644,504,364,280],
+    18: [718,560,394,310],
+    19: [792,624,442,338],
+    20: [858,666,482,382],
+    21: [929,711,509,403],
+    22: [1003,779,565,439],
+    23: [1091,857,611,461],
+    24: [1171,911,661,511],
+    25: [1273,997,715,535],
+    26: [1367,1059,751,593],
+    27: [1465,1125,805,625],
+    28: [1528,1190,868,658],
+    29: [1628,1264,908,698],
+    30: [1732,1370,982,742],
+    31: [1840,1452,1030,790],
+    32: [1952,1538,1112,842],
+    33: [2068,1628,1168,898],
+    34: [2188,1722,1228,958],
+    35: [2303,1809,1283,983],
+    36: [2431,1911,1351,1051],
+    37: [2563,1989,1423,1093],
+    38: [2699,2099,1499,1139],
+    39: [2809,2213,1579,1219],
+    40: [2953,2331,1663,1273],
+}
+VERSION_TO_BYTES = {
+    quality: {version: sizes[place] for version, sizes in VERSIONS.items()} for place, quality in enumerate([L,M,Q,H])
+}
+
+def grid_size(version):
+    return version*4+17
+
+def qr_codes(data, error_correction, version, scale):
+    naive_chunk_size = VERSION_TO_BYTES[error_correction][version]
+    for chunk_digits in range(1, 10):
+        prefix_format = "{:0>" + str(chunk_digits) + "} "
+        chunk_size = naive_chunk_size -len(prefix_format.format(0))
+        if len(data) / chunk_size < 10**chunk_digits:
+            break
+    assert len(data) / chunk_size < 10**chunk_digits
+    
+    qrs = []
+    for start in range(0, len(data), chunk_size):
+        qr = qrcode.QRCode(
+            version=version,
+            error_correction=error_correction,
+            box_size=scale,
+        )
+        chunk = prefix_format.format(start//chunk_size+1).encode('ascii') + data[start:start+chunk_size]
+        qr.add_data(qrcode.util.QRData(chunk, mode=MODE), optimize=0)
+        qr.make(fit=False)
+        qrs.append(qr)
+    assert len(qrs) < 1000
+    return chunk_digits, qrs
+
+def show_help(status=1):
+    print(HELP)
+    sys.exit(status)
+
+if __name__ == "__main__":
+    # defaults settings
+    qr_version = 10
+    error_correction = qrcode.constants.ERROR_CORRECT_M # default, 25%
+    scale = 8
+    dpi = 300
+    page_w_inch, page_h_inch = 7,9
+    MODE = qrcode.util.MODE_8BIT_BYTE # not settable
+    restore_file = None
+
+    # parse command-line arguments
+    args = sys.argv[1:]
+    pargs = []
+    while len(args) > 0:
+        arg, args = args[0], args[1:]
+        if arg in ["-h", "--help"]:
+            show_help(status=0)
+        elif arg == "--qr-version":
+            if len(args) < 1:
+                show_help()
+            qr_version, args = int(args[0]), args[1:]
+        elif arg == "--dpi":
+            if len(args) < 1:
+                show_help()
+            dpi, args = int(args[0]), args[1:]
+        elif arg == "--scale":
+            if len(args) == 0:
+                show_help()
+            scale, args = int(args[0]), args[1:]
+        elif arg == "--error-correction":
+            if len(args) < 1:
+                show_help()
+            error_correction, args = {"L":L, "M": M, "Q": Q, "H": H}[args[0].upper()], args[1:]
+        elif arg == "--page":
+            if len(args) < 2:
+                show_help()
+            page_w_inch, page_h_inch, args = float(args[0]), float(args[1]), args[2:]
+        elif arg == "--filename":
+            if len(args) < 1:
+                show_help()
+            restore_file, args = args[0], args[1:]
+            assert len(restore_file) > 0 and not restore_file.startswith("-")
+        elif arg in ["-v", "--verbose"]:
+            logging.basicConfig(level=logging.INFO)
+        elif arg == "--":
+            # Stop parsing arguments
+            pargs, args = pargs + args, []
+        elif arg == "-":
+            vargs.append(arg)
+        elif arg.startswith("-"):
+            show_help()
+        else:
+            pargs.append(arg)
+    if len(pargs) != 1:
+        show_help()
+    file_path, = pargs
+
+    # open the file (or stdin, if "-" is passed as the file)
+    if file_path == "-":
+        output_path = "{restore_file or 'stdin'}.qr.pdf"
+        f = sys.stdin
+    else:
+        output_path = file_path+".qr.pdf"
+        if restore_file is None and len(file_path) <= 32:
+            restore_file = file_path
+        f = open(file_path, "rb")
+    if restore_file is None:
+        restore_file = "file"
+
+    # read the entire file into memory
+    try:
+        content = f.read()
+    finally:
+        f.close()
+    sha256sum = hashlib.sha256(content).hexdigest()
+    logging.info(f"read file {restore_file} (sha {sha256sum})")
+
+    # Escape newlines so zbar* --raw (newline-separated) is useful
+    assert b"\r" not in content # This is the biggest problem with the current system
+    content = content.replace(b"\n",b"\r") # for easier reading back in, when QRs are printed newline-separated
+
+    # Make a temporary working directory in the current folder
+    try:
+        os.mkdir("qr-codes")
+        for x in os.listdir("qr-codes"):
+            os.remove(os.path.join("qr-codes", x))
+    except FileExistsError:
+        pass
+
+    # Generate QR codes
+    code_digits, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
+
+    # Output QR codes, one per file, to PNGs. Add labels with imagemagick.
+    labeled = []
+    for i, qr in enumerate(qrs):
+        img = qr.make_image()
+        qr_path = f"qr-codes/qr-{i+1:0>{code_digits}}.png"
+        img.save(qr_path)
+
+        relabel_path = f"qr-codes/qr_labled-{i+1:0>{code_digits}}.png"
+        label = f"{restore_file} code {i+1:0>{code_digits}}/{len(qrs):0>{code_digits}} QR {qr_version}"
+
+        subprocess.call(["convert", qr_path, "label:" + label, "-gravity", "Center", "-append", relabel_path])
+        os.remove(qr_path)
+        labeled.append(relabel_path)
+    logging.info(f"{len(qrs)} qr codes (at version {qr_version}) total")
+
+    # Figure out page layout now that we know the size and number of QR codes. Output to the user.
+    qr_w_pixel, qr_h_pixel = grid_size(qr_version), grid_size(qr_version)
+    logging.info(f"QR code is: {qr_w_pixel}x{qr_w_pixel}px")
+
+    page_w_pixel, page_h_pixel = page_w_inch * dpi, page_h_inch * dpi # 1 "dot" = 1 pixel
+    w_unit, h_unit = page_w_pixel // scale, page_h_pixel // scale
+    logging.info(f"Page is: {page_w_pixel}x{page_h_pixel}px")
+    
+    page_w_qr, page_h_qr = math.floor(page_w_pixel // qr_w_pixel), math.floor(page_h_pixel // qr_h_pixel) # TODO: account for labels
+    qr_per_page = page_w_qr * page_h_qr
+    num_pages = math.ceil(len(qrs)/qr_per_page)
+    logging.info(f"{page_w_qr} x {page_h_qr} qr codes (at version {qr_version}) per page. {num_pages} pages total")
+
+    density = len(content) / num_pages
+    logging.info(f"{len(content)} bytes in {num_pages} ({density:.2}bytes/page)")
+
+    # Use imagemagick to make one png file per row of QRs
+    rows = []
+    for row_start in range(0, len(qrs), page_w_qr):
+        row_qrs = labeled[row_start:row_start+page_w_qr]
+        row_path = f"qr-codes/qr-row-{row_start+1}-to-{row_start+page_w_qr}.png"
+        subprocess.call(["convert", "+append"]+row_qrs+[row_path])
+        for row_qr in row_qrs:
+            os.remove(row_qr)
+        rows.append(row_path)
+
+    # Use imagemagick to make one png file per page-side
+    pages = []
+    pdf_pages = []
+    for page_num, page_start in enumerate(range(0, len(rows), page_h_qr)):
+        page_rows = rows[page_start:page_start+page_h_qr]
+        page_path_unlabeled = f"qr-codes/qr-page-{page_num+1}-unlabeled.png"
+        subprocess.call(["convert", "-append"]+page_rows+[page_path_unlabeled])
+        page_path_labeled = f"qr-codes/qr-page-{page_num+1}.png"
+        HOWTO = f'(page {page_num}/{num_pages}) To restore {restore_file}, run in Linux:\nzbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # scan each code at least once in any order\nsort -u /tmp/qrs | cut -c{code_digits+2}- | tr -d "\\\\n" | tr "\\\\r" "\\\\n" >{restore_file}\nsha256sum {restore_file} # {sha256sum[:32]}'
+        subprocess.call(["convert", page_path_unlabeled, "-pointsize", "48", "label:"+HOWTO, "+swap", "-gravity", "Center", "-append", page_path_labeled])
+        os.remove(page_path_unlabeled)
+        for page_row in page_rows:
+            os.remove(page_row)
+        pages.append(page_path_labeled)
+        #pdf_path = f"qr-codes/qr-page-{page_num+1}.pdf"
+        #subprocess.call(["img2pdf", page_path_labeled, "-o", pdf_path], stderr=subprocess.DEVNULL)
+        #pdf_pages.append(pdf_path)
+    #subprocess.call(["convert"] + pdf_pages + [f"qr-codes/qr-{journal_id}.pdf"])
+    #for pdf_page in pdf_pages:
+    #    os.remove(pdf_page)
