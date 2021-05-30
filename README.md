@@ -31,4 +31,3 @@ To restore from a paper backup:
 1. Generate a .pdf or .ps file. Currently I generate one .png per page.
 2. Properly figure out the maximum printable area
 3. Maximize the density a bit more. Properly account for text padding in labels.
-4. Allow arbitrary binary data by escaping "\r"

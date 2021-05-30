@@ -8,7 +8,7 @@ Requirements to make the PDF: python 'qrcode' library, imagemagick, img2pdf
 Requirements to restore from the PDF: zbar (only)
 """
 
-import hashlib, logging, math, os, subprocess, sys, qrcode
+import base64, hashlib, logging, math, os, subprocess, sys, qrcode
 
 HELP='''Usage: qr-codes.py [OPTIONS] FILE
 Convert a binary file to a paper .pdf backup of QR codes.
@@ -27,6 +27,8 @@ The QR codes can be read back with a scanner or webcam to re-create the original
         Uses QR codes, version VERSION. Versions range from 1-40. The bigger the version, the harder to scan but the more data per code. Default: 10
     --scale SCALE
         Scale QR codes so that each small square in the QR code is SCALE x SCALE pixels. Default: 8
+    --base64
+        Force base64 encoding. Normally this is turned on only when needed.
     --verbose, -v
         Print more detailed information during run
 
@@ -94,11 +96,11 @@ def grid_size(version):
 def qr_codes(data, error_correction, version, scale):
     naive_chunk_size = VERSION_TO_BYTES[error_correction][version]
     for chunk_digits in range(1, 10):
-        prefix_format = "{:0>" + str(chunk_digits) + "} "
+        prefix_format = "{:0>" + str(chunk_digits) + "}"
         chunk_size = naive_chunk_size -len(prefix_format.format(0))
-        if len(data) / chunk_size < 10**chunk_digits:
+        if len(data) / chunk_size < 10**chunk_digits-1:
             break
-    assert len(data) / chunk_size < 10**chunk_digits
+    assert len(data) / chunk_size < 10**chunk_digits-1
     
     qrs = []
     for start in range(0, len(data), chunk_size):
@@ -127,6 +129,7 @@ if __name__ == "__main__":
     page_w_inch, page_h_inch = 7,9
     MODE = qrcode.util.MODE_8BIT_BYTE # not settable
     restore_file = None
+    use_base64 = False
 
     # parse command-line arguments
     args = sys.argv[1:]
@@ -160,13 +163,15 @@ if __name__ == "__main__":
                 show_help()
             restore_file, args = args[0], args[1:]
             assert len(restore_file) > 0 and not restore_file.startswith("-")
+        elif arg == "--base64":
+            use_base64 = True
         elif arg in ["-v", "--verbose"]:
             logging.basicConfig(level=logging.INFO)
         elif arg == "--":
             # Stop parsing arguments
             pargs, args = pargs + args, []
         elif arg == "-":
-            vargs.append(arg)
+            pargs.append(arg)
         elif arg.startswith("-"):
             show_help()
         else:
@@ -188,7 +193,7 @@ if __name__ == "__main__":
 
     # open the file (or stdin, if "-" is passed as the file)
     if file_path == "-":
-        f = sys.stdin
+        f = sys.stdin.buffer
     else:
         f = open(file_path, "rb")
 
@@ -200,9 +205,16 @@ if __name__ == "__main__":
     sha256sum = hashlib.sha256(content).hexdigest()
     logging.info(f"read file {restore_file} (sha {sha256sum})")
 
-    # Escape newlines so zbar* --raw (newline-separated) is useful
-    assert b"\r" not in content # This is the biggest problem with the current system
-    content = content.replace(b"\n",b"\r") # for easier reading back in, when QRs are printed newline-separated
+    if b"\r" in content or b"\0" in content:
+        print(b"\r" in content, b"\0" in content)
+        use_base64 = True
+
+    if use_base64:
+        # Deal with \r and \0
+        content = base64.b64encode(content)
+    else:
+        # Escape newlines so zbar* --raw (newline-separated) is useful
+        content = content.replace(b"\n",b"\r") # for easier reading back in, when QRs are printed newline-separated
 
     # Make a temporary working directory in the current folder
     try:
@@ -264,7 +276,15 @@ if __name__ == "__main__":
         page_path_unlabeled = f"qr-codes/qr-page-{page_num+1}-unlabeled.png"
         subprocess.call(["convert", "-append"]+page_rows+[page_path_unlabeled])
         page_path_labeled = f"qr-codes/qr-page-{page_num+1}.png"
-        HOWTO = f'(page {page_num+1}/{num_pages}) generated using: {nice_cmd}\nTo restore {restore_file}, run in Linux:\nStep 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # Scan each code at least once in any order\nStep 1 (scanner option): zbarimg --raw *.png >>/tmp/qrs\nStep 2 (restore): sort -u /tmp/qrs | cut -c{code_digits+2}- | tr -d "\\\\n" | tr "\\\\r" "\\\\n" >{restore_file}\nStep 3 (verify): sha256sum {restore_file} # {sha256sum}'
+        HOWTO = f'(page {page_num+1}/{num_pages}) generated using: {nice_cmd}'
+        HOWTO += f'\nTo restore {restore_file}, run in Linux:'
+        HOWTO += f'\nStep 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # Scan each code at least once in any order'
+        HOWTO += f'\nStep 1 (scanner option): zbarimg -q --raw *.png >>/tmp/qrs'
+        if use_base64:
+            HOWTO += f'\nStep 2 (restore): sort -u /tmp/qrs | cut -c{code_digits+1}- | base64 -d >{restore_file}\n'
+        else:
+            HOWTO += f'\nStep 2 (restore): sort -u /tmp/qrs | cut -c{code_digits+1}- | tr -d "\\\\n" | tr "\\\\r" "\\\\n" >{restore_file}\n'
+        HOWTO += f'Step 3 (verify): sha256sum {restore_file} # {sha256sum}'
         subprocess.call(["convert", page_path_unlabeled, "-pointsize", "36", "label:"+HOWTO, "+swap", "-gravity", "Center", "-append", page_path_labeled])
         os.remove(page_path_unlabeled)
         for page_row in page_rows:
