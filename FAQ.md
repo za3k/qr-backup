@@ -5,11 +5,11 @@
 - [Should I encrypt (password-protect) my backups?](#should-i-encrypt-password-protect-my-backups)
 - [Why doesn't the restore process use qr-backup?](#why-doesnt-the-restore-process-use-qr-backup)
 - [How exactly does the backup/restore process work?](#how-exactly-does-the-backuprestore-process-work)
-- [What are the design goals of qr-backup?](https://github.com/za3k/qr-backup/blob/master/FAQS.md#what-are-the-design-goals-of-qr-backup)
-- [Do you support Windows / why don't you support Windows?]()
-- [Do you support mac/OS X?]()
-- [How do I find the maximum dimensions of my printer?]()
-- [When I print a page, part of it is cut off]()
+- [What are the design goals of qr-backup?](#what-are-the-design-goals-of-qr-backup)
+- [Do you support Windows / why don't you support Windows?](#why-dont-you-support-windows)
+- [Do you support mac/OS X?](#why-dont-you-support-macos-x)
+- [How do I find the maximum dimensions of my printer?](#how-do-i-find-the-maximum-dimensions-of-my-printer)
+- [When I print a page, part of it is cut off](#when-i-print-a-page-part-of-it-is-cut-off)
 
 ## How much data does this back up per page?
 qr-backup on default settings backs up about 3KB/page. This is about the same as written text in a small font--maybe a little worse.
