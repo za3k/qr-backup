@@ -175,17 +175,22 @@ if __name__ == "__main__":
         show_help()
     file_path, = pargs
 
-    # open the file (or stdin, if "-" is passed as the file)
     if file_path == "-":
         output_path = "{restore_file or 'stdin'}.qr.pdf"
-        f = sys.stdin
     else:
-        output_path = file_path+".qr.pdf"
         if restore_file is None and len(file_path) <= 32:
             restore_file = file_path
-        f = open(file_path, "rb")
+        output_path = file_path+".qr.pdf"
     if restore_file is None:
         restore_file = "file"
+
+    nice_cmd = ' '.join(["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_inch), str(page_h_inch), "--filename", restore_file])
+
+    # open the file (or stdin, if "-" is passed as the file)
+    if file_path == "-":
+        f = sys.stdin
+    else:
+        f = open(file_path, "rb")
 
     # read the entire file into memory
     try:
@@ -218,7 +223,7 @@ if __name__ == "__main__":
         img.save(qr_path)
 
         relabel_path = f"qr-codes/qr_labled-{i+1:0>{code_digits}}.png"
-        label = f"{restore_file} code {i+1:0>{code_digits}}/{len(qrs):0>{code_digits}} QR {qr_version}"
+        label = f"{restore_file} code {i+1:0>{code_digits}}/{len(qrs):0>{code_digits}}"
 
         subprocess.call(["convert", qr_path, "label:" + label, "-gravity", "Center", "-append", relabel_path])
         os.remove(qr_path)
@@ -226,7 +231,7 @@ if __name__ == "__main__":
     logging.info(f"{len(qrs)} qr codes (at version {qr_version}) total")
 
     # Figure out page layout now that we know the size and number of QR codes. Output to the user.
-    qr_w_pixel, qr_h_pixel = grid_size(qr_version), grid_size(qr_version)
+    qr_w_pixel, qr_h_pixel = grid_size(qr_version) * scale, grid_size(qr_version) * scale
     logging.info(f"QR code is: {qr_w_pixel}x{qr_w_pixel}px")
 
     page_w_pixel, page_h_pixel = page_w_inch * dpi, page_h_inch * dpi # 1 "dot" = 1 pixel
@@ -239,7 +244,7 @@ if __name__ == "__main__":
     logging.info(f"{page_w_qr} x {page_h_qr} qr codes (at version {qr_version}) per page. {num_pages} pages total")
 
     density = len(content) / num_pages
-    logging.info(f"{len(content)} bytes in {num_pages} ({density:.2}bytes/page)")
+    logging.info(f"{len(content)} bytes in {num_pages} ({density/1000:.2}KB/page)")
 
     # Use imagemagick to make one png file per row of QRs
     rows = []
@@ -259,8 +264,8 @@ if __name__ == "__main__":
         page_path_unlabeled = f"qr-codes/qr-page-{page_num+1}-unlabeled.png"
         subprocess.call(["convert", "-append"]+page_rows+[page_path_unlabeled])
         page_path_labeled = f"qr-codes/qr-page-{page_num+1}.png"
-        HOWTO = f'(page {page_num}/{num_pages}) To restore {restore_file}, run in Linux:\nzbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # scan each code at least once in any order\nsort -u /tmp/qrs | cut -c{code_digits+2}- | tr -d "\\\\n" | tr "\\\\r" "\\\\n" >{restore_file}\nsha256sum {restore_file} # {sha256sum[:32]}'
-        subprocess.call(["convert", page_path_unlabeled, "-pointsize", "48", "label:"+HOWTO, "+swap", "-gravity", "Center", "-append", page_path_labeled])
+        HOWTO = f'(page {page_num+1}/{num_pages}) generated using: {nice_cmd}\nTo restore {restore_file}, run in Linux:\nStep 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # Scan each code at least once in any order\nStep 1 (scanner option): zbarimg --raw *.png >>/tmp/qrs\nStep 2 (restore): sort -u /tmp/qrs | cut -c{code_digits+2}- | tr -d "\\\\n" | tr "\\\\r" "\\\\n" >{restore_file}\nStep 3 (verify): sha256sum {restore_file} # {sha256sum[:32]}'
+        subprocess.call(["convert", page_path_unlabeled, "-pointsize", "36", "label:"+HOWTO, "+swap", "-gravity", "Center", "-append", page_path_labeled])
         os.remove(page_path_unlabeled)
         for page_row in page_rows:
             os.remove(page_row)
