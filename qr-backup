@@ -264,7 +264,7 @@ if __name__ == "__main__":
         page_path_unlabeled = f"qr-codes/qr-page-{page_num+1}-unlabeled.png"
         subprocess.call(["convert", "-append"]+page_rows+[page_path_unlabeled])
         page_path_labeled = f"qr-codes/qr-page-{page_num+1}.png"
-        HOWTO = f'(page {page_num+1}/{num_pages}) generated using: {nice_cmd}\nTo restore {restore_file}, run in Linux:\nStep 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # Scan each code at least once in any order\nStep 1 (scanner option): zbarimg --raw *.png >>/tmp/qrs\nStep 2 (restore): sort -u /tmp/qrs | cut -c{code_digits+2}- | tr -d "\\\\n" | tr "\\\\r" "\\\\n" >{restore_file}\nStep 3 (verify): sha256sum {restore_file} # {sha256sum[:32]}'
+        HOWTO = f'(page {page_num+1}/{num_pages}) generated using: {nice_cmd}\nTo restore {restore_file}, run in Linux:\nStep 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # Scan each code at least once in any order\nStep 1 (scanner option): zbarimg --raw *.png >>/tmp/qrs\nStep 2 (restore): sort -u /tmp/qrs | cut -c{code_digits+2}- | tr -d "\\\\n" | tr "\\\\r" "\\\\n" >{restore_file}\nStep 3 (verify): sha256sum {restore_file} # {sha256sum}'
         subprocess.call(["convert", page_path_unlabeled, "-pointsize", "36", "label:"+HOWTO, "+swap", "-gravity", "Center", "-append", page_path_labeled])
         os.remove(page_path_unlabeled)
         for page_row in page_rows:
