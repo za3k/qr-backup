@@ -196,7 +196,7 @@ if __name__ == "__main__":
     if restore_file is None:
         restore_file = "file"
 
-    nice_cmd = ' '.join(["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_inch), str(page_h_inch), "--filename", restore_file])
+    nice_cmd = ' '.join([x for x in ["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_inch), str(page_h_inch), '--compress' if use_compression else '--no-compress', '--base64' if use_base64 else None, "--filename", restore_file] if x is not None])
 
     # open the file (or stdin, if "-" is passed as the file)
     if file_path == "-":
@@ -231,10 +231,10 @@ if __name__ == "__main__":
     # Make a temporary working directory in the current folder
     try:
         os.mkdir("qr-codes")
-        for x in os.listdir("qr-codes"):
-            os.remove(os.path.join("qr-codes", x))
     except FileExistsError:
         pass
+    for x in os.listdir("qr-codes"):
+        os.remove(os.path.join("qr-codes", x))
 
     # Generate QR codes
     code_digits, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
@@ -268,7 +268,7 @@ if __name__ == "__main__":
     logging.info(f"{page_w_qr} x {page_h_qr} qr codes (at version {qr_version}) per page. {num_pages} pages total")
 
     density = original_len / num_pages
-    logging.info(f"{len(content)} bytes in {num_pages} ({density/1000:.2}KB/page)")
+    logging.info(f"{len(content)} bytes in {num_pages} ({density/1000:.2f}KB/page)")
 
     # Use imagemagick to make one png file per row of QRs
     rows = []
@@ -301,7 +301,7 @@ if __name__ == "__main__":
             HOWTO += ' | gunzip'
         HOWTO += f' >{restore_file}'
         HOWTO += f'\nStep 3 (verify): sha256sum {restore_file} # {sha256sum}'
-        subprocess.call(["convert", page_path_unlabeled, "-pointsize", "36", "label:"+HOWTO, "+swap", "-gravity", "Center", "-append", page_path_labeled])
+        subprocess.call(["convert", page_path_unlabeled, "-pointsize", "24", "label:"+HOWTO, "+swap", "-gravity", "Center", "-append", page_path_labeled])
         os.remove(page_path_unlabeled)
         for page_row in page_rows:
             os.remove(page_row)
