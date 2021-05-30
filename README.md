@@ -8,7 +8,7 @@ Following the directions in the pdf, the QR codes can be re-scanned or photograp
 
 Test restoring from your paper backup when you make it, NOT when you need it.
 
-For a full list of options, run `qr-backup --help`.
+For a full list of options, run `qr-backup --help`. For more questions, see the [FAQ](FAQ.md)
 
 ## Example Backup
 ![Example Backup](example.png)
