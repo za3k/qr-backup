@@ -8,7 +8,7 @@ Requirements to make the PDF: python 'qrcode' library, imagemagick, img2pdf
 Requirements to restore from the PDF: zbar (only)
 """
 
-import base64, hashlib, logging, math, os, subprocess, sys, qrcode
+import base64, gzip, hashlib, logging, math, os, subprocess, sys, qrcode
 
 HELP='''Usage: qr-codes.py [OPTIONS] FILE
 Convert a binary file to a paper .pdf backup of QR codes.
@@ -17,6 +17,8 @@ The QR codes can be read back with a scanner or webcam to re-create the original
 
     --dpi DPI
         Sets the print resolution of your printer. Default: 300
+    --compress, --no-compress
+        This gives a more compact backup, but partial recovery is impossible. Turns base-64 encoding on. Default: compressed
     --error-correction CORRECTION
         Sets the error correction level. Options are L, M, Q, and H. Default: M (25%)
     --filename FILENAME
@@ -28,11 +30,11 @@ The QR codes can be read back with a scanner or webcam to re-create the original
     --scale SCALE
         Scale QR codes so that each small square in the QR code is SCALE x SCALE pixels. Default: 8
     --base64
-        Force base64 encoding. Normally this is turned on only when needed.
+        Force base64 encoding. Default: turned on if needed
     --verbose, -v
         Print more detailed information during run
 
-The QR mode is always binary, and QR compression is always disabled.
+The QR mode is always binary with no QR compression.
 
 The output is named <FILE>.qr.pdf'''
 
@@ -130,6 +132,7 @@ if __name__ == "__main__":
     MODE = qrcode.util.MODE_8BIT_BYTE # not settable
     restore_file = None
     use_base64 = False
+    use_compression = True
 
     # parse command-line arguments
     args = sys.argv[1:]
@@ -138,40 +141,44 @@ if __name__ == "__main__":
         arg, args = args[0], args[1:]
         if arg in ["-h", "--help"]:
             show_help(status=0)
-        elif arg == "--qr-version":
-            if len(args) < 1:
-                show_help()
-            qr_version, args = int(args[0]), args[1:]
+        elif arg == "--base64":
+            use_base64 = True
+        elif arg == "--compress":
+            use_compression = True
         elif arg == "--dpi":
             if len(args) < 1:
                 show_help()
             dpi, args = int(args[0]), args[1:]
-        elif arg == "--scale":
-            if len(args) == 0:
-                show_help()
-            scale, args = int(args[0]), args[1:]
         elif arg == "--error-correction":
             if len(args) < 1:
                 show_help()
             error_correction, args = {"L":L, "M": M, "Q": Q, "H": H}[args[0].upper()], args[1:]
-        elif arg == "--page":
-            if len(args) < 2:
-                show_help()
-            page_w_inch, page_h_inch, args = float(args[0]), float(args[1]), args[2:]
         elif arg == "--filename":
             if len(args) < 1:
                 show_help()
             restore_file, args = args[0], args[1:]
             assert len(restore_file) > 0 and not restore_file.startswith("-")
-        elif arg == "--base64":
-            use_base64 = True
+        elif arg == "--no-compress":
+            use_compression = False
+        elif arg == "--page":
+            if len(args) < 2:
+                show_help()
+            page_w_inch, page_h_inch, args = float(args[0]), float(args[1]), args[2:]
+        elif arg == "--qr-version":
+            if len(args) < 1:
+                show_help()
+            qr_version, args = int(args[0]), args[1:]
+        elif arg == "--scale":
+            if len(args) == 0:
+                show_help()
+            scale, args = int(args[0]), args[1:]
         elif arg in ["-v", "--verbose"]:
             logging.basicConfig(level=logging.INFO)
+        elif arg == "-":
+            pargs.append(arg)
         elif arg == "--":
             # Stop parsing arguments
             pargs, args = pargs + args, []
-        elif arg == "-":
-            pargs.append(arg)
         elif arg.startswith("-"):
             show_help()
         else:
@@ -203,10 +210,15 @@ if __name__ == "__main__":
     finally:
         f.close()
     sha256sum = hashlib.sha256(content).hexdigest()
-    logging.info(f"read file {restore_file} (sha {sha256sum})")
+    original_len = len(content)
+    logging.info(f"read file {restore_file} (sha {sha256sum}, {original_len/1000}KB)")
 
+    # (Gzip) Compression
+    if use_compression:
+        content = gzip.compress(content)
+
+    # Base-64 encoding
     if b"\r" in content or b"\0" in content:
-        print(b"\r" in content, b"\0" in content)
         use_base64 = True
 
     if use_base64:
@@ -255,7 +267,7 @@ if __name__ == "__main__":
     num_pages = math.ceil(len(qrs)/qr_per_page)
     logging.info(f"{page_w_qr} x {page_h_qr} qr codes (at version {qr_version}) per page. {num_pages} pages total")
 
-    density = len(content) / num_pages
+    density = original_len / num_pages
     logging.info(f"{len(content)} bytes in {num_pages} ({density/1000:.2}KB/page)")
 
     # Use imagemagick to make one png file per row of QRs
@@ -280,11 +292,15 @@ if __name__ == "__main__":
         HOWTO += f'\nTo restore {restore_file}, run in Linux:'
         HOWTO += f'\nStep 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # Scan each code at least once in any order'
         HOWTO += f'\nStep 1 (scanner option): zbarimg -q --raw *.png >>/tmp/qrs'
+        HOWTO += f'\nStep 2 (restore): sort -u /tmp/qrs | cut -c{code_digits+1}-'
         if use_base64:
-            HOWTO += f'\nStep 2 (restore): sort -u /tmp/qrs | cut -c{code_digits+1}- | base64 -d >{restore_file}\n'
+            HOWTO += ' | base64 -d'
         else:
-            HOWTO += f'\nStep 2 (restore): sort -u /tmp/qrs | cut -c{code_digits+1}- | tr -d "\\\\n" | tr "\\\\r" "\\\\n" >{restore_file}\n'
-        HOWTO += f'Step 3 (verify): sha256sum {restore_file} # {sha256sum}'
+            HOWTO += ' tr -d "\\\\n" | tr "\\\\r" "\\\\n"'
+        if use_compression:
+            HOWTO += ' | gunzip'
+        HOWTO += f' >{restore_file}'
+        HOWTO += f'\nStep 3 (verify): sha256sum {restore_file} # {sha256sum}'
         subprocess.call(["convert", page_path_unlabeled, "-pointsize", "36", "label:"+HOWTO, "+swap", "-gravity", "Center", "-append", page_path_labeled])
         os.remove(page_path_unlabeled)
         for page_row in page_rows:
