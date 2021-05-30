@@ -1,4 +1,6 @@
-(Not done) Generate paper backups for Linux/Mac.
+Generate paper backups for Linux/Mac.
+
+**Current status: Not done.** Makes .png files instead of a single .pdf
 
 Takes any file, and outputs a "paper backup": a printable pdf full of QR codes. 
 
