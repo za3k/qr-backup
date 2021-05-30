@@ -8,13 +8,15 @@ Following the directions in the pdf, the QR codes can be re-scanned or photograp
 
 Test restoring from your paper backup when you make it, NOT when you need it.
 
+For a full list of options, run `qr-backup --help`.
+
 ## Example Backup
 ![Example Backup](example.png)
 
 ## Instructions
 To make a paper backup:
 
-0. Requirements: a printer; python, python-qrcode, imagemagick, img2pdf
+0. Requirements: a printer; python 3.6 or later, python-pil, python-qrcode, imagemagick, img2pdf
 1. Run `qr-backup <FILE>`. This makes `<FILE>.qr.pdf`
 2. Print `<FILE>.qr.pdf` onto some paper. Now you have a backup. It's a bunch of QR codes and some instructions.
 
@@ -32,4 +34,4 @@ To restore from a paper backup:
 ## TODO
 1. Generate a .pdf or .ps file. Currently I generate one .png per page.
 2. Properly figure out the maximum printable area
-3. Maximize the density a bit more. Properly account for text padding in labels.
+3. Maximize the density a bit more. Properly account for text padding in labels. Probably switch to PIL instead of ImageMagick as part of this.

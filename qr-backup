@@ -9,6 +9,7 @@ Requirements to restore from the PDF: zbar (only)
 """
 
 import base64, gzip, hashlib, logging, math, os, subprocess, sys, qrcode
+assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removing f-strings to fix it, sucka!"
 
 HELP='''Usage: qr-codes.py [OPTIONS] FILE
 Convert a binary file to a paper .pdf backup of QR codes.
