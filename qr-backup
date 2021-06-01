@@ -7,7 +7,10 @@ Following the directions in the pdf, the QR codes can be re-scanned or photograp
 Requirements to make the PDF: python 'qrcode' library, imagemagick, img2pdf
 Requirements to restore from the PDF: zbar (only)
 """
+# TODO: Align text labels with actual images, which currently include margins.
+# TODO: Bottoms of text labels are being cut off.
 
+from PIL import Image, ImageDraw, ImageFont
 import base64, gzip, hashlib, logging, math, os, subprocess, sys, qrcode
 assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removing f-strings to fix it, sucka!"
 
@@ -17,15 +20,15 @@ Convert a binary file to a paper .pdf backup of QR codes.
 The QR codes can be read back with a scanner or webcam to re-create the original file. Directions are included in the PDF. Make sure to test that you can actually read the QR size you select.
 
     --dpi DPI
-        Sets the print resolution of your printer. Default: 300
+        Sets the print resolution of your printer. Default: 600
     --compress, --no-compress
         This gives a more compact backup, but partial recovery is impossible. Turns base-64 encoding on. Default: compressed
     --error-correction CORRECTION
         Sets the error correction level. Options are L, M, Q, and H. Default: M (25%)
     --filename FILENAME
         Set the restored filename. Max 32 chars. Default: same as <FILE>
-    --page WIDTH_INCH HEIGHT_INCH
-        Sets the usable size of the paper on your printer. This should NOT be 8.5 x 11 -- make sure to include margins. Default: 7 x 9
+    --page WIDTH_POINTS HEIGHT_POINTS
+        Sets the usable size of the paper on your printer. This should NOT be 8.5 x 11 -- make sure to include margins. Default: 500x600
     --qr-version VERSION
         Uses QR codes, version VERSION. Versions range from 1-40. The bigger the version, the harder to scan but the more data per code. Default: 10
     --scale SCALE
@@ -123,13 +126,69 @@ def show_help(status=1):
     print(HELP)
     sys.exit(status)
 
+def add_label(image, text, side="bottom", max_fontsize=24):
+    assert side in ["bottom", "top"]
+    label = generate_label(text, max_width=image.size[0], max_fontsize=max_fontsize)
+    if side == "bottom":
+        return v_merge([image, label])
+    elif side == "top":
+        return v_merge([label, image])
+
+def generate_label(text, max_width, max_fontsize=24, margin=0):
+    # to do, maybe some fancy word wrap
+    test_im = Image.new(mode="1", size=(1,1), color=1)
+    test_draw = ImageDraw.Draw(test_im)
+
+    for fontsize in range(max_fontsize, 3, -1):
+        font = ImageFont.truetype("DejaVuSans.ttf", fontsize)
+        left, top, right, bottom = test_draw.textbbox((0,0), text, font=font)
+        width, height = right-left+1, bottom-top+1
+        #print(left, top, right, bottom, width, height)
+        if width <= max_width:
+            #logging.info("Printing label at font size " + str(fontsize))
+            im = Image.new(mode="1", size=(width, height), color=1) # black-and-white
+            draw = ImageDraw.Draw(im)
+            draw.multiline_text((0,0), text, font=font)
+            return im
+    #assert False
+    logging.error("Label cannot fit in the requested width. Forcing output...")
+    font = ImageFont.truetype("DejaVuSans.ttf", 12)
+    im = Image.new(mode="1", size=bbox, color=1) # black-and-white
+    draw = ImageDraw.Draw(im)
+    print(draw.multiline_textsize(text))
+    draw.multiline_text((0,0), text)
+    return im
+
+def h_merge(images):
+    # Alignment is top-aligned
+    combined_width = sum(image.size[0] for image in images)
+    max_height = max(image.size[1] for image in images)
+    im = Image.new(mode="1", size=(combined_width, max_height), color=1) #B+W
+    width = 0
+    for source_image in images:
+        im.paste(source_image,(width, 0))
+        width += source_image.size[0]
+    return im
+
+def v_merge(images):
+    # Alignment is left-aligned
+    max_width = max(image.size[0] for image in images)
+    combined_height = sum(image.size[1] for image in images)
+    #print([image.size for image in images], (max_width, combined_height))
+    im = Image.new(mode="1", size=(max_width, combined_height), color=1) #B+W
+    height = 0
+    for source_image in images:
+        im.paste(source_image,(0, height))
+        height += source_image.size[1]
+    return im
+
 if __name__ == "__main__":
     # defaults settings
     qr_version = 10
     error_correction = qrcode.constants.ERROR_CORRECT_M # default, 25%
     scale = 8
     dpi = 300
-    page_w_inch, page_h_inch = 7,9
+    page_w_points, page_h_points = 500,600
     MODE = qrcode.util.MODE_8BIT_BYTE # not settable
     restore_file = None
     use_base64 = False
@@ -164,7 +223,7 @@ if __name__ == "__main__":
         elif arg == "--page":
             if len(args) < 2:
                 show_help()
-            page_w_inch, page_h_inch, args = float(args[0]), float(args[1]), args[2:]
+            page_w_points, page_h_points, args = float(args[0]), float(args[1]), args[2:]
         elif arg == "--qr-version":
             if len(args) < 1:
                 show_help()
@@ -197,7 +256,7 @@ if __name__ == "__main__":
     if restore_file is None:
         restore_file = "file"
 
-    nice_cmd = ' '.join([x for x in ["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_inch), str(page_h_inch), '--compress' if use_compression else '--no-compress', '--base64' if use_base64 else None, "--filename", restore_file] if x is not None])
+    nice_cmd = ' '.join([x for x in ["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_points), str(page_h_points), '--compress' if use_compression else '--no-compress', '--base64' if use_base64 else None, "--filename", restore_file] if x is not None])
 
     # open the file (or stdin, if "-" is passed as the file)
     if file_path == "-":
@@ -219,15 +278,16 @@ if __name__ == "__main__":
         content = gzip.compress(content)
 
     # Base-64 encoding
-    if b"\r" in content or b"\0" in content:
+    NEWLINE_ESCAPE = b"\b"
+    if NEWLINE_ESCAPE in content or b"\0" in content:
         use_base64 = True
 
     if use_base64:
-        # Deal with \r and \0
+        # Deal with NEWLINE_ESCAPE and \0
         content = base64.b64encode(content)
     else:
         # Escape newlines so zbar* --raw (newline-separated) is useful
-        content = content.replace(b"\n",b"\r") # for easier reading back in, when QRs are printed newline-separated
+        content = content.replace(b"\n",NEWLINE_ESCAPE) # for easier reading back in, when QRs are printed newline-separated
 
     # Make a temporary working directory in the current folder
     try:
@@ -240,55 +300,45 @@ if __name__ == "__main__":
     # Generate QR codes
     code_digits, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
 
-    # Output QR codes, one per file, to PNGs. Add labels with imagemagick.
+    # Output QR codes with labels to Pillow Image objects
     labeled = []
     for i, qr in enumerate(qrs):
         img = qr.make_image()
-        qr_path = f"qr-codes/qr-{i+1:0>{code_digits}}.png"
-        img.save(qr_path)
-
-        relabel_path = f"qr-codes/qr_labled-{i+1:0>{code_digits}}.png"
         label = f"{restore_file} code {i+1:0>{code_digits}}/{len(qrs):0>{code_digits}}"
-
-        subprocess.call(["convert", qr_path, "label:" + label, "-gravity", "Center", "-append", relabel_path])
-        os.remove(qr_path)
-        labeled.append(relabel_path)
+        labeled.append(add_label(img, label))
     logging.info(f"{len(qrs)} qr codes (at version {qr_version}) total")
 
     # Figure out page layout now that we know the size and number of QR codes. Output to the user.
-    qr_w_pixel, qr_h_pixel = grid_size(qr_version) * scale, grid_size(qr_version) * scale
-    logging.info(f"QR code is: {qr_w_pixel}x{qr_w_pixel}px")
+    qr_w_pixel, qr_h_pixel = labeled[0].size
+    logging.info(f"QR code (including label) is: {qr_w_pixel}x{qr_w_pixel}px")
 
-    page_w_pixel, page_h_pixel = page_w_inch * dpi, page_h_inch * dpi # 1 "dot" = 1 pixel
-    w_unit, h_unit = page_w_pixel // scale, page_h_pixel // scale
+    page_w_pixel, page_h_pixel = math.floor(page_w_points/72.0*dpi), math.floor(page_h_points/72.0*dpi) # 1 "dot" = 1 pixel. !!important note, DPI is not used yet, which is probably some config bug in Pillow
     logging.info(f"Page is: {page_w_pixel}x{page_h_pixel}px")
     
-    page_w_qr, page_h_qr = math.floor(page_w_pixel // qr_w_pixel), math.floor(page_h_pixel // qr_h_pixel) # TODO: account for labels
+    page_w_qr, page_h_qr = math.floor((page_w_pixel-2) // qr_w_pixel), math.floor((page_h_pixel-2) // qr_h_pixel)
     qr_per_page = page_w_qr * page_h_qr
+    if qr_per_page == 0:
+        logging.error("Not even 1 QR fits on the given page. Forcing output anyway...")
+        page_w_qr, page_h_qr, qr_per_page = 1,1,1
     num_pages = math.ceil(len(qrs)/qr_per_page)
     logging.info(f"{page_w_qr} x {page_h_qr} qr codes (at version {qr_version}) per page. {num_pages} pages total")
 
     density = original_len / num_pages
     logging.info(f"{len(content)} bytes in {num_pages} ({density/1000:.2f}KB/page)")
 
-    # Use imagemagick to make one png file per row of QRs
+    # Combine rows
     rows = []
     for row_start in range(0, len(qrs), page_w_qr):
         row_qrs = labeled[row_start:row_start+page_w_qr]
-        row_path = f"qr-codes/qr-row-{row_start+1}-to-{row_start+page_w_qr}.png"
-        subprocess.call(["convert", "+append"]+row_qrs+[row_path])
-        for row_qr in row_qrs:
-            os.remove(row_qr)
-        rows.append(row_path)
+        rows.append(h_merge(row_qrs))
 
     # Use imagemagick to make one png file per page-side
     pages = []
-    pdf_pages = []
     for page_num, page_start in enumerate(range(0, len(rows), page_h_qr)):
+        page = Image.new(mode="1", size=(page_w_pixel, page_h_pixel), color=1)
         page_rows = rows[page_start:page_start+page_h_qr]
-        page_path_unlabeled = f"qr-codes/qr-page-{page_num+1}-unlabeled.png"
-        subprocess.call(["convert", "-append"]+page_rows+[page_path_unlabeled])
-        page_path_labeled = f"qr-codes/qr-page-{page_num+1}.png"
+        page_qrs = v_merge(page_rows)
+
         HOWTO = f'(page {page_num+1}/{num_pages}) generated using: {nice_cmd}'
         HOWTO += f'\nTo restore {restore_file}, run in Linux:'
         HOWTO += f'\nStep 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # Scan each code at least once in any order'
@@ -297,19 +347,17 @@ if __name__ == "__main__":
         if use_base64:
             HOWTO += ' | base64 -d'
         else:
-            HOWTO += ' tr -d "\\\\n" | tr "\\\\r" "\\\\n"'
+            HOWTO += ' tr -d "\\\\n" | tr "\\\\b" "\\\\n"' # Update if NEWLINE_ESCAPE is updated.
         if use_compression:
             HOWTO += ' | gunzip'
         HOWTO += f' >{restore_file}'
         HOWTO += f'\nStep 3 (verify): sha256sum {restore_file} # {sha256sum}'
-        subprocess.call(["convert", page_path_unlabeled, "-pointsize", "24", "label:"+HOWTO, "+swap", "-gravity", "Center", "-append", page_path_labeled])
-        os.remove(page_path_unlabeled)
-        for page_row in page_rows:
-            os.remove(page_row)
-        pages.append(page_path_labeled)
-        #pdf_path = f"qr-codes/qr-page-{page_num+1}.pdf"
-        #subprocess.call(["img2pdf", page_path_labeled, "-o", pdf_path], stderr=subprocess.DEVNULL)
-        #pdf_pages.append(pdf_path)
-    #subprocess.call(["convert"] + pdf_pages + [f"qr-codes/qr-{journal_id}.pdf"])
-    #for pdf_page in pdf_pages:
-    #    os.remove(pdf_page)
+
+        page_complete = add_label(page_qrs, HOWTO, side="top", max_fontsize=24)
+        page_draw = ImageDraw.Draw(page)
+        page_draw.rectangle(((0,0), (page_w_pixel-1, page_h_pixel-1)), outline=0, fill=1, width=1) # Rectangle for debugging print cutoff, and to look nice.
+        page.paste(page_complete, (1,1))
+        pages.append(page)
+
+    pages[0].save(output_path, format="pdf", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}")
+    #pages[0].save("example.png")
