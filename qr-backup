@@ -7,9 +7,6 @@ Following the directions in the pdf, the QR codes can be re-scanned or photograp
 Requirements to make the PDF: python 'qrcode' library, imagemagick, img2pdf
 Requirements to restore from the PDF: zbar (only)
 """
-# TODO: Bottoms of text labels are being cut off.
-# TODO: If stdout is piped somewhere, don't write to a file.
-
 import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageOps
 import base64, gzip, hashlib, logging, math, os, subprocess, sys, qrcode
 assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removing f-strings to fix it, sucka!"
@@ -274,6 +271,8 @@ if __name__ == "__main__":
         if restore_file is None and len(file_path) <= 32:
             restore_file = file_path
         output_path = file_path+".qr.pdf"
+    if not sys.stdout.isatty():
+        output_path = sys.stdout.buffer # pipe to stdout instead
     if restore_file is None:
         restore_file = "file"
 
