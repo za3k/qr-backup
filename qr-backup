@@ -8,7 +8,7 @@ Requirements to make the PDF: python 'qrcode' library, imagemagick, img2pdf
 Requirements to restore from the PDF: zbar (only)
 """
 import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageOps
-import base64, gzip, hashlib, logging, math, os, subprocess, sys, qrcode
+import base64, datetime, gzip, hashlib, logging, math, os, subprocess, sys, qrcode
 assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removing f-strings to fix it, sucka!"
 
 HELP='''Usage: qr-codes.py [OPTIONS] FILE
@@ -123,7 +123,7 @@ def show_help(status=1):
     print(HELP)
     sys.exit(status)
 
-def add_label(image, text, side="bottom", max_fontsize=24):
+def add_label(image, text, side="bottom", max_fontsize=24, label=None):
     """
     Add a label. The fontsize is max_fontsize if possible, otherwise it's shrunk down.
     The label is aligned to the bounding box of the image (lines up with margins).
@@ -138,7 +138,10 @@ def add_label(image, text, side="bottom", max_fontsize=24):
         max_width = right-left
 
     # Generate a label that fits. The fontsize will be reduced if needed. No word wrap is performed.
-    label = generate_label(text, max_width=image.size[0], max_fontsize=max_fontsize)
+    if label is None:
+        label = generate_label(text, max_width=image.size[0], max_fontsize=max_fontsize)
+    else:
+        assert label.size[0] <= max_width, "Premade label is too wide"
     label_bbox = PIL.ImageOps.invert(image.copy().convert("L")).getbbox()
 
     # Layout
@@ -154,7 +157,7 @@ def add_label(image, text, side="bottom", max_fontsize=24):
         assert False, "Unknown side for label: {}".format(side)
     return labeled
 
-def generate_label(text, max_width, max_fontsize=24, margin=0):
+def generate_label(text, max_width, max_fontsize=24):
     # to do, maybe some fancy word wrap
     test_im = PIL.Image.new(mode="1", size=(1,1), color=1)
     test_draw = PIL.ImageDraw.Draw(test_im)
@@ -277,6 +280,7 @@ if __name__ == "__main__":
         restore_file = "file"
 
     nice_cmd = ' '.join([x for x in ["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_points), str(page_h_points), '--compress' if use_compression else '--no-compress', '--base64' if use_base64 else None, "--filename", restore_file] if x is not None])
+    backup_date = datetime.date.today().strftime("%Y-%m-%d")
 
     # open the file (or stdin, if "-" is passed as the file)
     if file_path == "-":
@@ -312,6 +316,28 @@ if __name__ == "__main__":
     # Generate QR codes
     code_digits, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
 
+    # Instructions depend on the command line option
+    HOWTO = f'This is a {backup_date} paper backup of a computer file called: {restore_file}'
+    HOWTO += '\nTo restore this file from the command line in Linux:'
+    HOWTO += f'\n  Step 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # Scan each code at least once in any order'
+    HOWTO += f'\n  Step 1 (scanner option): zbarimg -q --raw *.png >>/tmp/qrs'
+    HOWTO += f'\n  Step 2 (restore): sort -u /tmp/qrs | cut -c{code_digits+1}-'
+    if use_base64:
+        HOWTO += ' | base64 -d'
+    else:
+        HOWTO += ' | tr -d "\\n" | tr "\\b" "\\n"' # Update if NEWLINE_ESCAPE is updated.
+    if use_compression:
+        HOWTO += ' | gunzip'
+    HOWTO += f' >{restore_file}'
+    HOWTO += f'\nStep 3 (verify): sha256sum {restore_file} # {sha256sum}'
+    HOWTO += f'\nThis backup was generated with: {nice_cmd}'
+
+    # Calculate QR padding produced by qrcode module
+    example_qr = qrs[0].make_image().copy()
+    qr_bbox = PIL.ImageOps.invert(example_qr.copy().convert("L")).getbbox()
+    qr_lpad, qr_tpad, qr_rpad, qr_bpad = qr_bbox[0], qr_bbox[1], example_qr.size[0]-qr_bbox[2], example_qr.size[1]-qr_bbox[3]
+    qr_hpad, qr_vpad = qr_lpad + qr_rpad, qr_tpad + qr_bpad
+
     # Output QR codes with labels to Pillow Image objects
     labeled = []
     for i, qr in enumerate(qrs):
@@ -327,8 +353,11 @@ if __name__ == "__main__":
 
     page_w_pixel, page_h_pixel = math.floor(page_w_points/72.0*dpi), math.floor(page_h_points/72.0*dpi) # 1 "dot" = 1 pixel. !!important note, DPI is not used yet, which is probably some config bug in Pillow
     logging.info(f"Page is: {page_w_pixel}x{page_h_pixel}px")
+
+    howto_label = generate_label(HOWTO, page_w_pixel - qr_hpad)
+    howto_height = howto_label.size[1]
     
-    page_w_qr, page_h_qr = math.floor((page_w_pixel-2) // qr_w_pixel), math.floor((page_h_pixel-2) // qr_h_pixel)
+    page_w_qr, page_h_qr = math.floor((page_w_pixel-2) // qr_w_pixel), math.floor((page_h_pixel-2-howto_height) // qr_h_pixel)
     qr_per_page = page_w_qr * page_h_qr
     if qr_per_page == 0:
         logging.error("Not even 1 QR fits on the given page. Forcing output anyway...")
@@ -351,24 +380,12 @@ if __name__ == "__main__":
         page = PIL.Image.new(mode="1", size=(page_w_pixel, page_h_pixel), color=1)
         page_rows = rows[page_start:page_start+page_h_qr]
         page_qrs = v_merge(page_rows)
-
-        HOWTO = f'(page {page_num+1}/{num_pages}) generated using: {nice_cmd}'
-        HOWTO += f'\nTo restore {restore_file}, run in Linux:'
-        HOWTO += f'\nStep 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # Scan each code at least once in any order'
-        HOWTO += f'\nStep 1 (scanner option): zbarimg -q --raw *.png >>/tmp/qrs'
-        HOWTO += f'\nStep 2 (restore): sort -u /tmp/qrs | cut -c{code_digits+1}-'
-        if use_base64:
-            HOWTO += ' | base64 -d'
-        else:
-            HOWTO += ' | tr -d "\\n" | tr "\\b" "\\n"' # Update if NEWLINE_ESCAPE is updated.
-        if use_compression:
-            HOWTO += ' | gunzip'
-        HOWTO += f' >{restore_file}'
-        HOWTO += f'\nStep 3 (verify): sha256sum {restore_file} # {sha256sum}'
-
+    
         page_complete = add_label(page_qrs, HOWTO, side="top", max_fontsize=24)
         page_draw = PIL.ImageDraw.Draw(page)
         page_draw.rectangle(((0,0), (page_w_pixel-1, page_h_pixel-1)), outline=0, fill=1, width=1) # Rectangle for debugging print cutoff, and to look nice.
+        page_num = generate_label("page {}/{}".format(page_num+1, num_pages), max_width=example_qr.size[0]/2)
+        page.paste(page_num, (page.size[0]-page_num.size[0]-1-qr_rpad, page.size[1]-page_num.size[1]-11))
         page.paste(page_complete, (1,1))
         pages.append(page)
 
