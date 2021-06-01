@@ -317,7 +317,7 @@ if __name__ == "__main__":
     code_digits, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
 
     # Instructions depend on the command line option
-    HOWTO = f'This is a {backup_date} paper backup of a computer file called: {restore_file}'
+    HOWTO = f'This is a paper backup of a computer file called: {restore_file}'
     HOWTO += '\nTo restore this file from the command line in Linux:'
     HOWTO += f'\n  Step 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # Scan each code at least once in any order'
     HOWTO += f'\n  Step 1 (scanner option): zbarimg -q --raw *.png >>/tmp/qrs'
@@ -329,8 +329,8 @@ if __name__ == "__main__":
     if use_compression:
         HOWTO += ' | gunzip'
     HOWTO += f' >{restore_file}'
-    HOWTO += f'\nStep 3 (verify): sha256sum {restore_file} # {sha256sum}'
-    HOWTO += f'\nThis backup was generated with: {nice_cmd}'
+    HOWTO += f'\n  Step 3 (verify): sha256sum {restore_file} # {sha256sum}'
+    HOWTO += f'\nThis backup was generated on {backup_date} with: {nice_cmd}'
 
     # Calculate QR padding produced by qrcode module
     example_qr = qrs[0].make_image().copy()
