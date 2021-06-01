@@ -28,7 +28,7 @@ Before changing the QR size and scale, test your restore! Looking OK to your eye
 
 - Print double-sided
 - Print smaller. Reduce the scale with `--scale <scale>` (default 8, min 1).
-- Use higher-data QR codes with `--qr-version <version>`` (default 10, max 40). Bigger codes doesn't always mean more data, because bigger codes don't always fit on the page. Pass `-v` to see how many KB/page you're getting. 
+- Use higher-data QR codes with `--qr-version <version>` (default 10, max 40). Bigger codes doesn't always mean more data, because bigger codes don't always fit on the page. Pass `-v` to see how many KB/page you're getting. 
 - Reduce error correction using `--error-correction L`. This makes your backup more sensitive to things like paper folds and dirt.
 - [Maximize](#how-do-i-find-the-maximum-dimensions-of-my-printer) your page size
 - Test and restore using a high-quality scanner, not a webcam.
@@ -64,7 +64,7 @@ The backup process:
 - If compression is on, data is compressed using gzip
 - If base64-encoding is needed (compression is on, or the file contains unusual characters, or the command line option is set) then the data is base64 encoded to turn it into normal-looking ascii.
 - The data is now preprocessed.
-- The data is split into small chunks, about 2K each with the default settings. If there are 50 cunks, the number 01 thru 50 is put at the start of each chunk, to label them.
+- The data is split into small chunks, about 2K each with the default settings. If there are 50 chunks, the number 01 thru 50 is put at the start of each chunk, to label them.
 - Each chunk is printed as a QR code on the paper, and labeled with the code number.
 
 The restore process is
@@ -117,20 +117,23 @@ Okay, you caught me, no one has asked this, it's not really an FAQ.
 - The output should include good documentation
 
 ## How do I find the maximum dimensions of my printer?
-If you really want to squeeze things in, you need to know how large you can print on a page.
-There are two options.
+If you really want to squeeze things in, you need to know how large you can print on a page. There are two options to figure out the max print size.
 
-- Experiment (using --page and --dpi)
-- Try to figure it out from CUPS.
+- Recommended: Experiment (using `--page`)
+- Calculate it from CUPS PPD files.
 
 If you want to figure it out from CUPS, here's what I did:
 1. On CUPS, check out the PPD file for your printer. The Debian wiki has useful information about PPDs.
-2. Use the ImageableArea for the paper size you want. Subtract the two pairs of numbers--this is the usable size of the page (in 'points', or 1/72 of an inch).
+2. Use the ImageableArea for the paper size you want. Subtract the two pairs of numbers--this is the usable size of the page (in 'points', or 1/72 of an inch, the same unit `--page` uses).
+
+You can also mess with `--dpi` but it's unlikely to be your limiting factor.
 
 ## When I print a page, part of it is cut off
 You may need to adjust the dimensions of your printer (or paper size, are you using A4 instead of US letter?).
 
 If you adjust your page dimensions to be smaller, and it works... but the QR codes are suddenly misaligned from your failing print by a small amount, you've hit a printing bug with full-size pages. You need to upgrade Ghostscript to 9.50 or later.
+
+I believe there is a remaining [issue](https://github.com/OpenPrinting/cups-filters/issues/373) in the new version, unfortunately.
 
 ## When I print the backup, the last page is rotated
 Pass CUPS the option 'nopdfAutoRotate'.
