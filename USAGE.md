@@ -27,5 +27,6 @@ The QR codes can be read back with a scanner or webcam to re-create the original
 
 The QR mode is always binary with no QR compression.
 
-The output is named <FILE>.qr.pdf
+The output is named <FILE>.qr.pdf. You can also pipe stdout.
+```
 ```
