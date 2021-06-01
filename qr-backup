@@ -347,7 +347,7 @@ if __name__ == "__main__":
         if use_base64:
             HOWTO += ' | base64 -d'
         else:
-            HOWTO += ' tr -d "\\\\n" | tr "\\\\b" "\\\\n"' # Update if NEWLINE_ESCAPE is updated.
+            HOWTO += ' | tr -d "\\n" | tr "\\b" "\\n"' # Update if NEWLINE_ESCAPE is updated.
         if use_compression:
             HOWTO += ' | gunzip'
         HOWTO += f' >{restore_file}'
