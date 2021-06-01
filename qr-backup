@@ -7,10 +7,10 @@ Following the directions in the pdf, the QR codes can be re-scanned or photograp
 Requirements to make the PDF: python 'qrcode' library, imagemagick, img2pdf
 Requirements to restore from the PDF: zbar (only)
 """
-# TODO: Align text labels with actual images, which currently include margins.
 # TODO: Bottoms of text labels are being cut off.
+# TODO: If stdout is piped somewhere, don't write to a file.
 
-from PIL import Image, ImageDraw, ImageFont
+import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageOps
 import base64, gzip, hashlib, logging, math, os, subprocess, sys, qrcode
 assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removing f-strings to fix it, sucka!"
 
@@ -127,34 +127,56 @@ def show_help(status=1):
     sys.exit(status)
 
 def add_label(image, text, side="bottom", max_fontsize=24):
-    assert side in ["bottom", "top"]
+    """
+    Add a label. The fontsize is max_fontsize if possible, otherwise it's shrunk down.
+    The label is aligned to the bounding box of the image (lines up with margins).
+    """
+    # Figure out the size and position of the original image
+    bbox = PIL.ImageOps.invert(image.copy().convert("L")).getbbox()
+    if bbox is None:
+        max_width = image.size[0]
+        left, upper, right, lower = 0,0,0,0
+    else:
+        left, upper, right, lower = bbox
+        max_width = right-left
+
+    # Generate a label that fits. The fontsize will be reduced if needed. No word wrap is performed.
     label = generate_label(text, max_width=image.size[0], max_fontsize=max_fontsize)
+    label_bbox = PIL.ImageOps.invert(image.copy().convert("L")).getbbox()
+
+    # Layout
+    width, combined_height = image.size[0], image.size[1] + label.size[1]
+    labeled = PIL.Image.new(mode="1", size=(image.size[0], combined_height), color=1) #B+W
     if side == "bottom":
-        return v_merge([image, label])
+        labeled.paste(image, (0,0))
+        labeled.paste(label, (left,image.size[1]))
     elif side == "top":
-        return v_merge([label, image])
+        labeled.paste(label, (left,0))
+        labeled.paste(image, (0,label.size[1]))
+    else:
+        assert False, "Unknown side for label: {}".format(side)
+    return labeled
 
 def generate_label(text, max_width, max_fontsize=24, margin=0):
     # to do, maybe some fancy word wrap
-    test_im = Image.new(mode="1", size=(1,1), color=1)
-    test_draw = ImageDraw.Draw(test_im)
+    test_im = PIL.Image.new(mode="1", size=(1,1), color=1)
+    test_draw = PIL.ImageDraw.Draw(test_im)
 
     for fontsize in range(max_fontsize, 3, -1):
-        font = ImageFont.truetype("DejaVuSans.ttf", fontsize)
-        left, top, right, bottom = test_draw.textbbox((0,0), text, font=font)
-        width, height = right-left+1, bottom-top+1
-        #print(left, top, right, bottom, width, height)
+        font = PIL.ImageFont.truetype("DejaVuSans.ttf", fontsize)
+        width, height = test_draw.multiline_textsize(text, font=font)
+        height += 4
         if width <= max_width:
             #logging.info("Printing label at font size " + str(fontsize))
-            im = Image.new(mode="1", size=(width, height), color=1) # black-and-white
-            draw = ImageDraw.Draw(im)
-            draw.multiline_text((0,0), text, font=font)
+            im = PIL.Image.new(mode="1", size=(width, height), color=1) # black-and-white
+            draw = PIL.ImageDraw.Draw(im)
+            draw.multiline_text((0,-2), text, font=font) # Eurgh, hardcoding an offset.
             return im
     #assert False
     logging.error("Label cannot fit in the requested width. Forcing output...")
-    font = ImageFont.truetype("DejaVuSans.ttf", 12)
-    im = Image.new(mode="1", size=bbox, color=1) # black-and-white
-    draw = ImageDraw.Draw(im)
+    font = PIL.ImageFont.truetype("DejaVuSans.ttf", 12)
+    im = PIL.Image.new(mode="1", size=bbox, color=1) # black-and-white
+    draw = PIL.ImageDraw.Draw(im)
     print(draw.multiline_textsize(text))
     draw.multiline_text((0,0), text)
     return im
@@ -163,7 +185,7 @@ def h_merge(images):
     # Alignment is top-aligned
     combined_width = sum(image.size[0] for image in images)
     max_height = max(image.size[1] for image in images)
-    im = Image.new(mode="1", size=(combined_width, max_height), color=1) #B+W
+    im = PIL.Image.new(mode="1", size=(combined_width, max_height), color=1) #B+W
     width = 0
     for source_image in images:
         im.paste(source_image,(width, 0))
@@ -174,8 +196,7 @@ def v_merge(images):
     # Alignment is left-aligned
     max_width = max(image.size[0] for image in images)
     combined_height = sum(image.size[1] for image in images)
-    #print([image.size for image in images], (max_width, combined_height))
-    im = Image.new(mode="1", size=(max_width, combined_height), color=1) #B+W
+    im = PIL.Image.new(mode="1", size=(max_width, combined_height), color=1) #B+W
     height = 0
     for source_image in images:
         im.paste(source_image,(0, height))
@@ -289,14 +310,6 @@ if __name__ == "__main__":
         # Escape newlines so zbar* --raw (newline-separated) is useful
         content = content.replace(b"\n",NEWLINE_ESCAPE) # for easier reading back in, when QRs are printed newline-separated
 
-    # Make a temporary working directory in the current folder
-    try:
-        os.mkdir("qr-codes")
-    except FileExistsError:
-        pass
-    for x in os.listdir("qr-codes"):
-        os.remove(os.path.join("qr-codes", x))
-
     # Generate QR codes
     code_digits, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
 
@@ -304,8 +317,9 @@ if __name__ == "__main__":
     labeled = []
     for i, qr in enumerate(qrs):
         img = qr.make_image()
-        label = f"{restore_file} code {i+1:0>{code_digits}}/{len(qrs):0>{code_digits}}"
+        label = f"code {i+1:0>{code_digits}}/{len(qrs):0>{code_digits}} {restore_file}"
         labeled.append(add_label(img, label))
+        labeled[0].save("test.png")
     logging.info(f"{len(qrs)} qr codes (at version {qr_version}) total")
 
     # Figure out page layout now that we know the size and number of QR codes. Output to the user.
@@ -335,7 +349,7 @@ if __name__ == "__main__":
     # Use imagemagick to make one png file per page-side
     pages = []
     for page_num, page_start in enumerate(range(0, len(rows), page_h_qr)):
-        page = Image.new(mode="1", size=(page_w_pixel, page_h_pixel), color=1)
+        page = PIL.Image.new(mode="1", size=(page_w_pixel, page_h_pixel), color=1)
         page_rows = rows[page_start:page_start+page_h_qr]
         page_qrs = v_merge(page_rows)
 
@@ -354,7 +368,7 @@ if __name__ == "__main__":
         HOWTO += f'\nStep 3 (verify): sha256sum {restore_file} # {sha256sum}'
 
         page_complete = add_label(page_qrs, HOWTO, side="top", max_fontsize=24)
-        page_draw = ImageDraw.Draw(page)
+        page_draw = PIL.ImageDraw.Draw(page)
         page_draw.rectangle(((0,0), (page_w_pixel-1, page_h_pixel-1)), outline=0, fill=1, width=1) # Rectangle for debugging print cutoff, and to look nice.
         page.paste(page_complete, (1,1))
         pages.append(page)
