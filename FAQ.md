@@ -13,6 +13,7 @@
 - [When I print a page, part of it is cut off](#when-i-print-a-page-part-of-it-is-cut-off)
 - [When I print the backup, the last page is rotated](#when-i-print-the-backup-the-last-page-is-rotated)
 - [How do I back up multiple files?](#how-do-i-back-up-multiple-files)
+- [How does qr-backup compare to OllyDbg's Paperback?](#how-does-qr-backup-compare-to-ollydbgs-paperback)
 
 # Answers
 
@@ -141,4 +142,26 @@ Pass CUPS the option 'nopdfAutoRotate'.
 ## How do I back up multiple files?
 1. You can run `qr-backup` multiple times, and print each PDF. If you lose any of the QR codes, you won't be able to restore that file.
 2. OR, you can tar/zip the files, and back up the tar/zip. If you lose any of the QR codes, you won't be able to restore **any** of the files.
+
+## How does qr-backup compare to OllyDbg's Paperback?
+First, here's what Paperback/Paperbak is:
+- [Description](https://ollydbg.de/Paperbak/)
+- [Original Code](https://github.com/timwaters/paperback )
+- [Attempted Linux fork](https://github.com/cyphar/paperback)
+
+Here's how they are similar/different
+- Both have the same essential goal and flow: back some stuff up to paper and restore it later.
+- Paperbak is Windows-only; qr-backup runs on Linux CLI and probably mac CLI.
+- Paperbak is focused around shoving the most data on paper possible (with some nice extras). qr-backup is focused on easy restore that actually works (with some nice extras).
+- I'm not super clear if Paperback actually/still works end to end (haven't tested it firsthand, because no Windows). I'll check if I can get cyphar to work on Linux. It would definitely be a good second tool, I'd probably use both.
+- Paperbak is designed to want a high-quality scanner (3x print dpi). qr-backup can use a webcam, sucky scanner, or whatever else that can read QR codes with a little hacking.
+- At a best estimate, default settings are 300X more data per page on Paperbak. Even at more aggressive qr-backup settings, I bet that's 10-30X. Part of this is QR--most of it is needing a really good scanner (aside from quality, webcams have focus length and stability issues, and I'm not sure zbar is that great).
+- Paperbak uses a proprietary format, and needs Paperbak to restore. qr-backup uses an esoteric mix of existing formats like QR and gzip, and can be restored with a bash oneliner of standard linux tools.
+- Paperbak uses reed-solomon coding, so you can lose part of the page(s) and still restore. This isn't implemented in qr-backup yet.
+- Both support compression.
+- Paperbak offers encryption. This isn't implemented in qr-backup yet.
+- qr-backup prints a bunch of human-readable info on the page explaining what it is and how to restore. Paperbak optionally prints a little of this (mostly the file name, size, and date)
+- Both are black-and-white only
+- qr-backup is designed to someday work as an easy app on phones, because it's based around digital cameras instead of scanners. It wouldn't be possible or useful to do this with paperbak.
+- qr-backup is maintained (well, as of writing this FAQ answer, at least!)
 

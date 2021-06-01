@@ -1,8 +1,8 @@
-Generate paper backups for Linux.
+Generate paper backups for Linux. Currently **command-linux Linux only**.
 
-Takes any file, and outputs a "paper backup": a printable black-and-white pdf full of QR codes. 
+Takes any file, and outputs a "paper backup": a printable black-and-white pdf full of QR codes. To back up your file, print the PDF. The pile of paper in your hand is now a backup of the file.
 
-Following the directions in the pdf, the QR codes can be re-scanned or photographed using a webcam to restore the original file.
+To restore the backup, follow the directions on the printed paper. The restore process involves holding QR codes up to your webcam, or optionally scanning them with a scanner. The restore process does NOT require the qr-backup program.
 
 For a full list of options, run `qr-backup --help` or read the [USAGE](USAGE.md) doc online. For more questions, see the [FAQ](FAQ.md).
 
