@@ -4,7 +4,7 @@ Takes any file, and outputs a "paper backup": a printable black-and-white pdf fu
 
 Following the directions in the pdf, the QR codes can be re-scanned or photographed using a webcam to restore the original file.
 
-For a full list of options, run `qr-backup --help`. For more questions, see the [FAQ](FAQ.md).
+For a full list of options, run `qr-backup --help` or read the [USAGE](usage.md) doc online. For more questions, see the [FAQ](FAQ.md).
 
 This is alpha software--I use it for my own backups, but I offer no guarantees. Test your restore when you make it, not when you need it!
 
