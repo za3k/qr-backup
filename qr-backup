@@ -8,7 +8,7 @@ Requirements to make the PDF: python 'qrcode' library, imagemagick, img2pdf
 Requirements to restore from the PDF: zbar (only)
 """
 import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageOps
-import base64, datetime, gzip, hashlib, logging, math, os, subprocess, sys, qrcode
+import base64, datetime, gzip, hashlib, io, logging, math, os, subprocess, sys, qrcode
 assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removing f-strings to fix it, sucka!"
 
 HELP='''Usage: qr-codes.py [OPTIONS] FILE
@@ -274,17 +274,17 @@ if __name__ == "__main__":
         if restore_file is None and len(file_path) <= 32:
             restore_file = file_path
         output_path = file_path+".qr.pdf"
-    if not sys.stdout.isatty():
-        output_path = sys.stdout.buffer # pipe to stdout instead
     if restore_file is None:
         restore_file = "file"
 
     nice_cmd = ' '.join([x for x in ["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_points), str(page_h_points), '--compress' if use_compression else '--no-compress', '--base64' if use_base64 else None, "--filename", restore_file] if x is not None])
     backup_date = datetime.date.today().strftime("%Y-%m-%d")
+    logging.info("Original arguments were: {}".format(repr(args)))
+    logging.info("Command arguments parsed. Equivalent command: {}".format(nice_cmd))
 
     # open the file (or stdin, if "-" is passed as the file)
     if file_path == "-":
-        f = sys.stdin.buffer
+        f = sys.stdin
     else:
         f = open(file_path, "rb")
 
@@ -328,9 +328,12 @@ if __name__ == "__main__":
         HOWTO += ' | tr -d "\\n" | tr "\\b" "\\n"' # Update if NEWLINE_ESCAPE is updated.
     if use_compression:
         HOWTO += ' | gunzip'
+    restore_cmd = HOWTO.split("\n")[-1].split(": ")[1]
+    logging.info(f"Restore command is: {restore_cmd}")
     HOWTO += f' >{restore_file}'
     HOWTO += f'\n  Step 3 (verify): sha256sum {restore_file} # {sha256sum}'
     HOWTO += f'\nThis backup was generated on {backup_date} with: {nice_cmd}'
+
 
     # Calculate QR padding produced by qrcode module
     example_qr = qrs[0].make_image().copy()
@@ -389,5 +392,29 @@ if __name__ == "__main__":
         page.paste(page_complete, (1,1))
         pages.append(page)
 
-    pages[0].save(output_path, format="pdf", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}")
+    if not sys.stdout.isatty(): 
+        # Write PDF to stdout
+        # PIL's pdf writer needs to mmap, so it can't accept sys.stdout directly
+        output_path = io.BytesIO() 
+
+        pages[0].save(output_path, format="pdf", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}")
+
+        sys.stdout.buffer.write(output_path.getbuffer())
+        logging.warning("Automatic digital restore skipped because output is to stdout.")
+    else:
+        # Write PDF to file
+        pages[0].save(output_path, format="pdf", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}")
+
+        # Test restore
+        zbarimg_present = subprocess.call(["which", "zbarimg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+
+        if zbarimg_present:
+            test_command = restore_cmd.replace("sort -u /tmp/qrs", "zbarimg --raw -q {} | sort -u".format(output_path)) + " | cmp {}".format(file_path)
+            code = subprocess.call(test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if code == 0:
+                logging.info("Automatic digital restore verification succeeded.")
+            else:
+                logging.error("!!Automatic digital restore verification FAILED (status code {}). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues".format(code))
+        else:
+                logging.warning("Attempted digital restore verification, but zbarimg was not available")
     #pages[0].save("example.png")
