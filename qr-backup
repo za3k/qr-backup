@@ -347,7 +347,6 @@ if __name__ == "__main__":
         img = qr.make_image()
         label = f"code {i+1:0>{code_digits}}/{len(qrs):0>{code_digits}} {restore_file}"
         labeled.append(add_label(img, label))
-        labeled[0].save("test.png")
     logging.info(f"{len(qrs)} qr codes (at version {qr_version}) total")
 
     # Figure out page layout now that we know the size and number of QR codes. Output to the user.
@@ -417,4 +416,6 @@ if __name__ == "__main__":
                 logging.error("!!Automatic digital restore verification FAILED (status code {}). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues".format(code))
         else:
                 logging.warning("Attempted digital restore verification, but zbarimg was not available")
-    #pages[0].save("example.png")
+
+    if file_path == "README.md": # Re-generate the example.png file when qr-backup changes
+        pages[0].save("example.png")
