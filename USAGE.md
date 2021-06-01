@@ -16,6 +16,8 @@ The QR codes can be read back with a scanner or webcam to re-create the original
         Set the restored filename. Max 32 chars. Default: same as <FILE>
     --page WIDTH_POINTS HEIGHT_POINTS
         Sets the usable size of the paper on your printer. This should NOT be 8.5 x 11 -- make sure to include margins. Default: 500x600
+    --output FILENAME, -o
+        Set the output pdf path (redirecting stdout also works). Default: <FILE>.qr.pdf
     --qr-version VERSION
         Uses QR codes, version VERSION. Versions range from 1-40. The bigger the version, the harder to scan but the more data per code. Default: 10
     --scale SCALE
