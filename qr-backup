@@ -282,7 +282,7 @@ if __name__ == "__main__":
             restore_file = "file"
     if output_path is None:
         if use_stdin:
-            output_path = "{restore_file or 'stdin'}.qr.pdf"
+            output_path = f"{restore_file or 'stdin'}.qr.pdf"
         else:
             output_path = input_path+".qr.pdf"
 
@@ -293,7 +293,7 @@ if __name__ == "__main__":
 
     # open the file (or stdin, if "-" is passed as the file)
     if use_stdin:
-        f = sys.stdin
+        f = sys.stdin.buffer
     else:
         f = open(input_path, "rb")
 
@@ -407,18 +407,19 @@ if __name__ == "__main__":
         tmp_pdf = io.BytesIO() 
         pages[0].save(tmp_pdf, format="pdf", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}")
         sys.stdout.buffer.write(tmp_pdf.getbuffer())
-
-        # Can't test restore
-        logging.warning("Automatic digital restore skipped because output is to stdout.")
     else:
         # Write PDF to file
         pages[0].save(output_path, format="pdf", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}")
 
+    if use_stdout or use_stdin:
+        # Can't test restore yet
+        logging.warning("Automatic digital restore skipped because qr-backup is being used in a pipe.")
+    else:
         # Test restore
         zbarimg_present = subprocess.call(["which", "zbarimg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
 
         if zbarimg_present:
-            test_command = "zbarimg --raw -q {} | {} | cmp {}".format(output_path, restore_cmd, input_path)
+            test_command = "zbarimg --raw -q -Sdisable -Sqrcode.enable {} | {} | cmp {}".format(output_path, restore_cmd, input_path)
             code = subprocess.call(test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if code == 0:
                 logging.info("Automatic digital restore verification succeeded.")
