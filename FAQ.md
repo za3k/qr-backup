@@ -35,6 +35,8 @@ Before changing the QR size and scale, test your restore! Looking OK to your eye
 - Test and restore using a high-quality scanner, not a webcam.
 - Use a different program. Ultimately, this is designed to make restores easy, not to pack data in as densely as posible. [PaperBack](http://ollydbg.de/Paperbak/) by OllyDbg claims to achieve 1-2MB per page, but requires Windows and a high-quality scanner. I have not been able to test the program myself.
 
+The absolute max qr-backup allows is about 200KB/page at `--scale 1`, but you'll never be able to read something that small in practice.
+
 ## How much of my backup can I lose and still restore?
 If you lose one page, or even one QR code (like if it's torn off or you spill grape juice), you're hosed. You won't be able to restore. If some dirt, a pen mark, etc gets on a QR code, you'll be fine.
 
