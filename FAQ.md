@@ -170,6 +170,7 @@ Here's how they are similar/different
 
 ## What other paper backup projects exist?
 2D code based (like qr-backup):
+- [qrencode](https://fukuchi.org/works/qrencode/), etc: Small amount of data can be directly printed to one QR code, and restored by any QR scanner.
 - [qr-backup](https://github.com/za3k/qr-backup): This project. Based on QR codes. Focuses on easy restore using webcam and standard CLI tools. Low data density.
 - [paperbackup](https://github.com/intra2net/paperbackup): Quite similar to qr-backup. Based on QR codes, focused on key backup. See also the [paperkey](http://www.jabberwocky.com/software/paperkey/) preprocessor.
 - [asc2qr.sh](https://github.com/4bitfocus/asc-key-to-qr-code): QR-based, less polished.
