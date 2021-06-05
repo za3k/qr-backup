@@ -14,7 +14,7 @@ assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removi
 HELP='''Usage: qr-codes.py [OPTIONS] FILE
 Convert a binary file to a paper .pdf backup of QR codes.
 
-The QR codes can be read back with a scanner or webcam to re-create the original file. Directions are included in the PDF. Make sure to test that you can actually read the QR size you select.
+The QR codes can be read back with a webcam or scanner to re-create the original file. Directions are included in the PDF. Make sure to test that you can actually read the QR size you select.
 
     --dpi DPI
         Sets the print resolution of your printer. Default: 600
@@ -120,9 +120,15 @@ def qr_codes(data, error_correction, version, scale):
     assert len(qrs) < 10**chunk_digits-1
     return chunk_digits, qrs
 
-def show_help(status=1):
-    print(HELP)
-    sys.exit(status)
+def show_help(error=None):
+    if error:
+        print(HELP, file=sys.stderr)
+        print(file=sys.stderr)
+        print("ERROR: {}".format(error), file=sys.stderr)
+        sys.exit(1)
+    else:
+        print(HELP)
+        sys.exit(0)
 
 def add_label(image, text, side="bottom", max_fontsize=24, max_width=None, label=None):
     """
@@ -227,41 +233,41 @@ if __name__ == "__main__":
     while len(args) > 0:
         arg, args = args[0], args[1:]
         if arg in ["-h", "--help"]:
-            show_help(status=0)
+            show_help()
         elif arg == "--base64":
             use_base64 = True
         elif arg == "--compress":
             use_compression = True
         elif arg == "--dpi":
             if len(args) < 1:
-                show_help()
+                show_help("--dpi requires one argument (an integer dots-per-inch)")
             dpi, args = int(args[0]), args[1:]
         elif arg == "--error-correction":
             if len(args) < 1:
-                show_help()
+                show_help("--error-correction requires one of: L M Q H")
             error_correction, args = {"L":L, "M": M, "Q": Q, "H": H}[args[0].upper()], args[1:]
         elif arg == "--filename":
             if len(args) < 1:
-                show_help()
+                show_help("--filename requires one argument")
             restore_file, args = args[0], args[1:]
             assert len(restore_file) > 0 and not restore_file.startswith("-")
         elif arg == "--no-compress":
             use_compression = False
         elif arg == "--page":
             if len(args) < 2:
-                show_help()
+                show_help("--page requires two arguments (decimal page width and height in inches")
             page_w_points, page_h_points, args = float(args[0]), float(args[1]), args[2:]
         elif arg in ["-o", "--output"]:
             if len(args) < 1:
-                show_help()
+                show_help("{} requires one argument".format(arg))
             output_path, args = args[0], args[1:]
         elif arg == "--qr-version":
             if len(args) < 1:
-                show_help()
+                show_help("--qr-version requires one argument (integer version between 2 and 40)")
             qr_version, args = int(args[0]), args[1:]
         elif arg == "--scale":
             if len(args) == 0:
-                show_help()
+                show_help("--scale requires one argument (integer scale in pixels)")
             scale, args = int(args[0]), args[1:]
         elif arg in ["-v", "--verbose"]:
             logging.basicConfig(level=logging.INFO)
@@ -274,8 +280,10 @@ if __name__ == "__main__":
             show_help()
         else:
             pargs.append(arg)
-    if len(pargs) != 1:
-        show_help()
+    if len(pargs) < 1:
+        show_help("Please supply a filename to backup")
+    elif len(pargs) > 1:
+        show_help("Multiple filenames given. qr-backup can only back up one file at a time")
     input_path, = pargs
 
     use_stdout = (output_path is None) and not sys.stdout.isatty()
@@ -437,7 +445,7 @@ if __name__ == "__main__":
             if code == 0:
                 logging.info("Automatic digital restore verification succeeded.")
             else:
-                logging.error("!!Automatic digital restore verification FAILED (status code {}). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues".format(code))
+                logging.error("!!Automatic digital restore verification FAILED (status code {}). This indicates a bug in either zbarimg (more likely) or in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues".format(code))
                 #sys.exit(1)
         else:
                 logging.warning("Attempted digital restore verification, but zbarimg was not available")
