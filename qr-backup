@@ -39,6 +39,7 @@ The QR codes can be read back with a scanner or webcam to re-create the original
 
 The QR mode is always binary with no QR compression.'''
 
+GENERATE_EXAMPLE = False # Manually generate example.png for the README when qr-backup changes
 L = qrcode.constants.ERROR_CORRECT_L
 M = qrcode.constants.ERROR_CORRECT_M # default, 25%
 Q = qrcode.constants.ERROR_CORRECT_Q
@@ -123,7 +124,7 @@ def show_help(status=1):
     print(HELP)
     sys.exit(status)
 
-def add_label(image, text, side="bottom", max_fontsize=24, label=None):
+def add_label(image, text, side="bottom", max_fontsize=24, max_width=None, label=None):
     """
     Add a label. The fontsize is max_fontsize if possible, otherwise it's shrunk down.
     The label is aligned to the bounding box of the image (lines up with margins).
@@ -131,22 +132,26 @@ def add_label(image, text, side="bottom", max_fontsize=24, label=None):
     # Figure out the size and position of the original image
     bbox = PIL.ImageOps.invert(image.copy().convert("L")).getbbox()
     if bbox is None:
-        max_width = image.size[0]
         left, upper, right, lower = 0,0,0,0
-    else:
+        if max_width is None:
+            max_width = image.size[0]
+    elif max_width is None:
         left, upper, right, lower = bbox
         max_width = right-left
+    else:
+        left, upper, right, lower = bbox
+        right, max_width = max(right, max_width), max_width-left
 
     # Generate a label that fits. The fontsize will be reduced if needed. No word wrap is performed.
     if label is None:
-        label = generate_label(text, max_width=image.size[0], max_fontsize=max_fontsize)
+        label = generate_label(text, max_width=max_width, max_fontsize=max_fontsize)
     else:
         assert label.size[0] <= max_width, "Premade label is too wide"
     label_bbox = PIL.ImageOps.invert(image.copy().convert("L")).getbbox()
 
     # Layout
-    width, combined_height = image.size[0], image.size[1] + label.size[1]
-    labeled = PIL.Image.new(mode="1", size=(image.size[0], combined_height), color=1) #B+W
+    width, combined_height = max(image.size[0], left+label.size[0]), image.size[1] + label.size[1]
+    labeled = PIL.Image.new(mode="1", size=(width, combined_height), color=1) #B+W
     if side == "bottom":
         labeled.paste(image, (0,0))
         labeled.paste(label, (left,image.size[1]))
@@ -387,18 +392,26 @@ if __name__ == "__main__":
         rows.append(h_merge(row_qrs))
 
     # Use imagemagick to make one png file per page-side
-    pages = []
+    unnumbered_pages = []
     for page_num, page_start in enumerate(range(0, len(rows), page_h_qr)):
-        page = PIL.Image.new(mode="1", size=(page_w_pixel, page_h_pixel), color=1)
         page_rows = rows[page_start:page_start+page_h_qr]
         page_qrs = v_merge(page_rows)
-    
-        page_complete = add_label(page_qrs, HOWTO, side="top", max_fontsize=24)
+        page_complete = add_label(page_qrs, HOWTO, side="top", max_fontsize=24, max_width=page_w_pixel-2)
+
+        if GENERATE_EXAMPLE:
+            page_h_pixel = page_complete.size[1]
+        page = PIL.Image.new(mode="1", size=(page_w_pixel, page_h_pixel), color=1)
         page_draw = PIL.ImageDraw.Draw(page)
         page_draw.rectangle(((0,0), (page_w_pixel-1, page_h_pixel-1)), outline=0, fill=1, width=1) # Rectangle for debugging print cutoff, and to look nice.
+        page.paste(page_complete, (1,1)) # Main contents
+        unnumbered_pages.append(page)
+
+    # Add page numbers after. Currently page-numbering is perfectly reliable, but we're about to add more complicated layout options.
+    pages = []
+    num_pages = len(unnumbered_pages)
+    for page_num, page in enumerate(unnumbered_pages):
         page_num = generate_label("page {}/{}".format(page_num+1, num_pages), max_width=example_qr.size[0]/2)
-        page.paste(page_num, (page.size[0]-page_num.size[0]-1-qr_rpad, page.size[1]-page_num.size[1]-11))
-        page.paste(page_complete, (1,1))
+        page.paste(page_num, (page.size[0]-page_num.size[0]-1-qr_rpad, page.size[1]-page_num.size[1]-11)) # Page num in bottom-right
         pages.append(page)
 
     if use_stdout: 
@@ -425,7 +438,9 @@ if __name__ == "__main__":
                 logging.info("Automatic digital restore verification succeeded.")
             else:
                 logging.error("!!Automatic digital restore verification FAILED (status code {}). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues".format(code))
+                #sys.exit(1)
         else:
                 logging.warning("Attempted digital restore verification, but zbarimg was not available")
 
-    #pages[0].save("example.png") # Re-generate the example.png file when qr-backup changes
+    if GENERATE_EXAMPLE:
+        pages[0].save("docs/example.png")
