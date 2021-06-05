@@ -34,7 +34,7 @@ Before changing the QR size and scale, test your restore! Looking OK to your eye
 - Reduce error correction using `--error-correction L`. This makes your backup more sensitive to things like paper folds and dirt.
 - [Maximize](#how-do-i-find-the-maximum-dimensions-of-my-printer) your page size
 - Test and restore using a high-quality scanner, not a webcam.
-- Use a different program. Ultimately, this is designed to make restores easy, not to pack data in as densely as posible. [PaperBack](http://ollydbg.de/Paperbak/) by OllyDbg claims to achieve 1-2MB per page, but requires Windows and a high-quality scanner. I have not been able to test the program myself.
+- Use a [different paper backup program](#what-other-paper-backup-projects-exist). Ultimately, this is designed to make restores easy, not to pack data in as densely as posible.
 
 The absolute max qr-backup allows is about 200KB/page at `--scale 1`, but you'll never be able to read something that small in practice.
 
@@ -53,7 +53,7 @@ I might someday, I just haven't done it yet.
 - I don't use Windows myself
 - I want the restore process to work WITHOUT qr-backup software. I'm not sure how to do this on Windws yet.
 
-In the meantime, you could try [PaperBack](http://ollydbg.de/Paperbak/) by OllyDbg which works only on Windows. I have not used the program myself.
+In the meantime, you could try [a different paper backup program](#what-other-paper-backup-projects-exist).
 
 ## Why don't you support mac/OS X?
 Both backup and restore probably work, actually, it's just not tested. `brew install zbar` and let me know in the issue tracker.
@@ -172,9 +172,9 @@ Here's how they are similar/different
 2D code based (like qr-backup):
 - [qrencode](https://fukuchi.org/works/qrencode/), etc: Small amount of data can be directly printed to one QR code, and restored by any QR scanner.
 - [qr-backup](https://github.com/za3k/qr-backup): This project. Based on QR codes. Focuses on easy restore using webcam and standard CLI tools. Low data density.
-- [paperbackup](https://github.com/intra2net/paperbackup): Quite similar to qr-backup. Based on QR codes, focused on key backup. See also the [paperkey](http://www.jabberwocky.com/software/paperkey/) preprocessor.
+- [paperbackup](https://github.com/intra2net/paperbackup): Remarkably similar to qr-backup, down to the code format. Based on QR codes. Focused on crpyto backup. See also the [paperkey](http://www.jabberwocky.com/software/paperkey/) preprocessor.
 - [asc2qr.sh](https://github.com/4bitfocus/asc-key-to-qr-code): QR-based, less polished.
-- [optar](http://ronja.twibright.com/optar/): Golay code based. Much denser.
+- [optar](http://ronja.twibright.com/optar/): Golay code based. Much denser, will require a scanner.
 
 Dense pixel grid (like Paperbak):
 - Paperback [explanation](https://ollydbg.de/Paperbak/) and [code](https://github.com/Rupan/paperbak/) by OlyDbg: Much denser, windows-only.
