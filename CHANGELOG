@@ -1,7 +1,8 @@
 v1.1 (not released)
 - Automatic digital restore check added, which uses zbarimg to test restore from the digital .pdf. The automatic check is only performed when input and output are files.
 - Added `-o`, `--output` option to give the name of an output file.
-- Bugfix: Reading from stdin did not work correctly.
+- Bugfix (#6): Reading from stdin did not work correctly. Now it should.
+- Bugfix (#7): The instructions are always full-page-width now.
 
 v1.0
 - Generate a PDF from any file

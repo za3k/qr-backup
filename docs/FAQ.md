@@ -1,4 +1,5 @@
 # Questions
+- [What are the advantages of paper backups?](#what-are-the-advantages-of-paper-backups)
 - [How much data does this back up per page / why don't you back up more data per page?](#how-much-data-does-this-back-up-per-page)
 - [How do I back up more data per page?](#how-do-i-back-up-more-data-per-page)
 - [How much of my backup can I lose and still restore?](#how-much-of-my-backup-can-i-lose-and-still-restore)
@@ -17,6 +18,14 @@
 - [What other paper backup projects exist?](#what-other-paper-backup-projects-exist)
 
 # Answers
+
+## What are the advantages of paper backups?
+- It's easy to think about physical stuff. Everyone can understand whether they still have a backup (by looking), whether it's damaged (by looking), and who can access their backup.
+- Paper can't be hacked. It's easy to think about who can access a paper backup compared to an online computer. Paper backups are a popular option to store GPG keys, SSH keys, crypto wallets, or encrypted messages for this reason.
+- It's fun. A lot of people make paper backups for the novelty factor.
+- Paper lasts a long time. CDs and flash-based storage (USB drives, SD cards, and many modern hard drives) usually stop working within 10 years. Magnetic storage works for a fairly long time unless it is damaged.
+- Paper has no parts that can break. It's common for hard drives to break, and for the data inside to become unreadable, even though it's still good.
+- Damage is visible. Sometimes a flash drive can be silently corrupted, or a drive's parts will break, but it looks OK. You can look at paper and whether it's damaged, and how much damage there is.
 
 ## How much data does this back up per page?
 qr-backup on default settings (but with compression disabled) backs up about 3KB data/page. This is about the same as written text in a small font--maybe not as good. Compression improves that to 15KB english text/page for my test data.
