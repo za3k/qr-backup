@@ -1,0 +1,18 @@
+v1.1 (not released)
+- Automatic digital restore check added, which uses zbarimg to test restore from the digital .pdf. The automatic check is only performed when input and output are files.
+- Added `-o`, `--output` option to give the name of an output file.
+- Bugfix: Reading from stdin did not work correctly.
+
+v1.0
+- Generate a PDF from any file
+- Built-in compression (on by default)
+- Uses base64 encoding, nothing, or '\n' to '\b' replacement as needed to avoid newlines in restore output.
+- Long files are output as multiple QR codes.
+
+- Default page size is 500px x 600px
+- Default settings are 8px scale, version 10 QR codes, using binary encoding and L error correction. Output is 3K/side on default settings.
+- Font is DevaVuSans (included)
+
+- Restore is Linux CLI only, using zbar and coreutils.
+- Release tested on Linux CLI only.
+- Added README, FAQ, and USAGE.
