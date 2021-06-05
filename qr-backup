@@ -407,7 +407,7 @@ if __name__ == "__main__":
         page_complete = add_label(page_qrs, HOWTO, side="top", max_fontsize=24, max_width=page_w_pixel-2)
 
         if GENERATE_EXAMPLE:
-            page_h_pixel = page_complete.size[1]
+            page_h_pixel = page_complete.size[1]+2
         page = PIL.Image.new(mode="1", size=(page_w_pixel, page_h_pixel), color=1)
         page_draw = PIL.ImageDraw.Draw(page)
         page_draw.rectangle(((0,0), (page_w_pixel-1, page_h_pixel-1)), outline=0, fill=1, width=1) # Rectangle for debugging print cutoff, and to look nice.

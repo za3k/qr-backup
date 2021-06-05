@@ -24,7 +24,7 @@
 - Paper can't be hacked. It's easy to think about who can access a paper backup compared to an online computer. Paper backups are a popular option to store GPG keys, SSH keys, crypto wallets, or encrypted messages for this reason.
 - It's fun. A lot of people make paper backups for the novelty factor.
 - Paper lasts a long time. CDs and flash-based storage (USB drives, SD cards, and many modern hard drives) usually stop working within 10 years. Magnetic storage works for a fairly long time unless it is damaged.
-- Paper has no parts that can break. It's common for hard drives to break, and for the data inside to become unreadable, even though it's still good.
+- Paper has no parts that can break. It's common for hard drives to break, and for the data inside to become unreadable, even though the data is still okay.
 - Damage is visible. Sometimes a flash drive can be silently corrupted, or a drive's parts will break, but it looks OK. You can look at paper and whether it's damaged, and how much damage there is.
 
 ## How much data does this back up per page?

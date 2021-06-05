@@ -4,15 +4,15 @@ Takes any file, and outputs a "paper backup": a printable black-and-white pdf fu
 
 This is alpha software--I use it for my own backups, but I offer no guarantees. Test your restore when you make it, not when you need it!
 
-# What is a paper backup?
+## What is a paper backup?
 A paper backup is a number of printed sheets of paper containing special barcodes.
 
 If your file is lost, corrupted, deleted, etc, you can restore from your paper backup. qr-backup reads the [QR barcodes](https://en.wikipedia.org/wiki/QR_code) using your computer's webcam (or scanner) to get your file back.
 
 ## Should I back up to paper?
-Possibly, if you have a small and important document. You should still back it up to something more usual like a USB thumbstick *first*, which is easier to restore and update.
+Possibly, if you have a small and important document. You should still back it up to something more usual like a USB thumbstick *first*, because it's easier to restore and update.
 
-Paper is not the best or most efficient storage method, so you can't back up big files. 10K or 100K files is a reasonable limit.
+Paper is not the best or most efficient storage method, so you can't back up big files. 10KB or 100KB files is a reasonable limit.
 
 [Learn about the advantages](docs/FAQ.md#what-are-the-advantages-of-paper-backups) of paper backups. 
 
