@@ -4,12 +4,12 @@ Takes any file, and outputs a "paper backup": a printable black-and-white pdf fu
 
 To restore the backup, follow the directions on the printed paper. The restore process involves holding QR codes up to your webcam, or optionally scanning them with a scanner. The restore process does NOT require the qr-backup program.
 
-For a full list of options, run `qr-backup --help` or read the [USAGE](USAGE.md) doc online. For more questions, see the [FAQ](FAQ.md).
+For a full list of options, run `qr-backup --help` or read the [USAGE](docs/USAGE.md) doc online. For more questions, see the [FAQ](docs/FAQ.md).
 
 This is alpha software--I use it for my own backups, but I offer no guarantees. Test your restore when you make it, not when you need it!
 
 ## Example Backup
-![Example Backup](example.png)
+![Example Backup](docs/example.png)
 
 ## Instructions
 To make a paper backup:
