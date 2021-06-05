@@ -14,6 +14,7 @@
 - [When I print the backup, the last page is rotated](#when-i-print-the-backup-the-last-page-is-rotated)
 - [How do I back up multiple files?](#how-do-i-back-up-multiple-files)
 - [How does qr-backup compare to OllyDbg's Paperback?](#how-does-qr-backup-compare-to-ollydbgs-paperback)
+- [What other paper backup projects exist?](#what-other-paper-backup-projects-exist)
 
 # Answers
 
@@ -166,4 +167,16 @@ Here's how they are similar/different
 - Both are black-and-white only
 - qr-backup is designed to someday work as an easy app on phones, because it's based around digital cameras instead of scanners. It wouldn't be possible or useful to do this with paperbak.
 - qr-backup is maintained (well, as of writing this FAQ answer, at least!)
+
+## What other paper backup projects exist?
+2D code based (like qr-backup):
+- [qr-backup](https://github.com/za3k/qr-backup): This project. Based on QR codes. Focuses on easy restore using webcam and standard CLI tools. Low data density.
+- [paperbackup](https://github.com/intra2net/paperbackup): Quite similar to qr-backup. Based on QR codes, focused on key backup. See also the [paperkey](http://www.jabberwocky.com/software/paperkey/) preprocessor.
+- [asc2qr.sh](https://github.com/4bitfocus/asc-key-to-qr-code): QR-based, less polished.
+- [optar](http://ronja.twibright.com/optar/): Golay code based. Much denser.
+
+Dense pixel grid (like Paperbak):
+- Paperback [explanation](https://ollydbg.de/Paperbak/) and [code](https://github.com/Rupan/paperbak/) by OlyDbg: Much denser, windows-only.
+- [paperback-cli](https://git.teknik.io/scuti/paperback-cli): Cross-OS port for OlyDbg's Paperbak program.
+- [ColorSafe](https://github.com/colorsafe/colorsafe): Black and white or color output.
 
