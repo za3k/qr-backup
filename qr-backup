@@ -289,8 +289,9 @@ if __name__ == "__main__":
     use_stdout = (output_path is None) and not sys.stdout.isatty()
     use_stdin = (input_path == "-")
     if restore_file is None:
-        if use_stdin and len(input_path) <= 32:
-            restore_file = input_path
+        input_filename = input_path.split("/")[-1]
+        if not use_stdin and len(input_filename) <= 32:
+            restore_file = input_filename
         else:
             restore_file = "file"
     if output_path is None:
