@@ -12,7 +12,7 @@ If your file is lost, corrupted, deleted, etc, you can restore from your paper b
 ## Should I back up to paper?
 Possibly. You should still back it up to something more usual like a USB thumbstick *first*, because it's easier to restore and update.
 
-Common files to back up are small, important records, and small secret files. Examples include: a diary, an address book, a short story you wrote, financial records, medical records, an ssh or gpg cryptographic key, or a cryptocurrency (bitcoin) wallet.
+Common files to back up are small important records, and small secret files. Examples include: a diary, an address book, a short story you wrote, financial records, medical records, an ssh or gpg cryptographic key, or a cryptocurrency (bitcoin) wallet.
 
 Paper is not the best or most efficient storage method, so you can't back up big files. 10KB or 100KB files is a reasonable limit.
 
