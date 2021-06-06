@@ -10,7 +10,9 @@ A paper backup is a number of printed sheets of paper containing special barcode
 If your file is lost, corrupted, deleted, etc, you can restore from your paper backup. qr-backup reads the [QR barcodes](https://en.wikipedia.org/wiki/QR_code) using your computer's webcam (or scanner) to get your file back.
 
 ## Should I back up to paper?
-Possibly, if you have a small and important document. You should still back it up to something more usual like a USB thumbstick *first*, because it's easier to restore and update.
+Possibly. You should still back it up to something more usual like a USB thumbstick *first*, because it's easier to restore and update.
+
+Common files to back up are small, important records, and small secret files. Examples include: a diary, an address book, medical records, or financial records, an ssh or gpg cryptographic key, or a cryptocurrency (bitcoin) wallet.
 
 Paper is not the best or most efficient storage method, so you can't back up big files. 10KB or 100KB files is a reasonable limit.
 
