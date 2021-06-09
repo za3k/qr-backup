@@ -8,7 +8,7 @@ Requirements to make the PDF: python 'qrcode' library, imagemagick, img2pdf
 Requirements to restore from the PDF: zbar (only)
 """
 import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageOps
-import base64, datetime, gzip, hashlib, io, logging, math, os, subprocess, sys, qrcode
+import base64, datetime, gzip, hashlib, io, logging, math, os, reedsolo, subprocess, sys, qrcode
 assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removing f-strings to fix it, sucka!"
 
 HELP='''Usage: qr-codes.py [OPTIONS] FILE
@@ -22,7 +22,9 @@ Backup options:
     --dpi DPI
         Sets the print resolution of your printer. Default: 600
     --compress, --no-compress
-        This gives a more compact backup, but partial recovery is impossible. Turns base-64 encoding on. Default: compressed
+        This gives a more compact backup, but partial recovery is impossible. Default: compressed
+    --erasure-coding, --no-erasure coding
+        Add QR codes in case you lose any. Only works with --restore. Always at 30% loss allowed. Default: on
     --error-correction CORRECTION
         Sets the error correction level. Options are L, M, Q, and H. Default: M (25%)
     --filename FILENAME
@@ -35,16 +37,14 @@ Backup options:
         Uses QR codes, version VERSION. Versions range from 1-40. The bigger the version, the harder to scan but the more data per code. Default: 10
     --scale SCALE
         Scale QR codes so that each small square in the QR code is SCALE x SCALE pixels. Default: 8
-    --base64
-        Force base64 encoding on. Default: turned on if needed
 
 Restore options:
-    --base64, --no-base64
-        Force base64 decoding (on/off). Default: automatic
     --code-count COUNT, -c COUNT
         Specify the number of total QR codes. Default: automatic
     --compress, --no-compress
         Force decompression (on/off). Default: automatic
+    --erasure-coding, --no-erasure coding
+        Use extra QR codes to restore. Default: automatic
     --image-restore
         Force image-based (scanner) restore. Default: automatic
     --display, --no-display
@@ -62,7 +62,6 @@ Options for both:
 
 The QR mode is always binary with no QR compression.'''
 
-GENERATE_DOCS = False # Manually generate example.png for the README when qr-backup changes
 L = qrcode.constants.ERROR_CORRECT_L
 M = qrcode.constants.ERROR_CORRECT_M # default, 25%
 Q = qrcode.constants.ERROR_CORRECT_Q
@@ -121,30 +120,106 @@ VERSION_TO_BYTES = {
 def grid_size(version):
     return version*4+17
 
-def qr_codes(data, error_correction, version, scale):
-    naive_chunk_size = VERSION_TO_BYTES[error_correction][version]
-    num_qrs = 0
+def generate_erasure(data, chunk_size, erasure_count):
+    # Pad data to even chunk_size
+    padding_len = (chunk_size - len(data)) % chunk_size
+    data_padded = data + b"\n"*padding_len # pad with newlines--see bottom of restore_erasure for why
+    num_chunks = len(data_padded) // chunk_size
+
+    codec = reedsolo.RSCodec(erasure_count)
+    # Split data into NUM_CHUNKS length strings
+    sample = codec.encode(data_padded[::chunk_size])
+    symbols = [bytes(a) for a in zip(*(codec.encode(data_padded[i::chunk_size]) for i in range(chunk_size)))]
+    assert len(symbols) != 0
+    assert all(len(symbol)==chunk_size for symbol in symbols)
+
+    erasure_codes = symbols[-erasure_count:]
+    assert len(erasure_codes) == erasure_count
+
+    num_erased = erasure_count
+    self_check = restore_erasure([None]*num_erased+[data[i*chunk_size:i*chunk_size+chunk_size] for i in range(num_erased, num_chunks)], erasure_codes, chunk_size)
+    assert self_check == data, "Self-check failed in generate_erasure"
+    logging.info("generate_erasure: deleted first few symbols, restore works fine")
+    return erasure_codes
+
+def restore_erasure(normal_codes, erasure_codes, chunk_size):
+    """
+    Restores a file using erasure codes. Missing symbols should be supplied as None.
+    """
+    # Make 'symbols' uniform length bytestrings, while extracting missing_symbols
+    symbols = normal_codes + erasure_codes
+    missing_symbols = [i for i,symbol in enumerate(symbols) if symbol is None]
+    for i in missing_symbols:
+        symbols[i] = b' '*chunk_size # Doesn't really matter what we set this to as long as it's the right length.
+    assert all(isinstance(symbol, bytes) for symbol in symbols)
+
+    # Pad normal_codes[-1] to even chunk_size
+    i = len(normal_codes)-1
+    if len(symbols[i]) < chunk_size:
+        padding_len = chunk_size-len(symbols[i])
+        symbols[i] = symbols[i] + b"\n"*padding_len # pad with newlines--see bottom of restore_erasure for why
+        assert len(symbols[i]) == chunk_size
+    assert all(len(symbol)==chunk_size for symbol in symbols)
+
+    # Decode
+    codec = reedsolo.RSCodec(len(erasure_codes))
+    broken_strings = list(zip(*symbols))
+    fixed_strings = [codec.decode(x, erase_pos=missing_symbols)[0] for x in broken_strings]
+    simple_restore = b''.join(bytes(x) for x in zip(*fixed_strings))
+    assert len(simple_restore) == len(normal_codes)*chunk_size
+    return simple_restore.rstrip(b'\n') # remove padding. newlines were used so this works--they're guaranteed not to appear in the original data. alternative would be to store the data length
+
+def generate_chunks(data, naive_chunk_size, use_erasure_coding, erasure_rate=0.3):
+    """
+    Return a bunch of chunks to put in QRs.
+    Sadly erasure coding means we need to do base64 encoding at the per-QR level, and always (at least until we add a direct binary scan, in which case we can stop doing it at all)
+    """
+    num_normal, num_erasures, num_qrs = 0, 0, 0
     for chunk_digits in range(1, 10):
-        prefix_format = "N{:0>" + str(chunk_digits) + "}/{:0>" + str(chunk_digits)+"} "
-        chunk_size = naive_chunk_size - len(prefix_format.format(0,0))
-        num_qrs = math.ceil(len(data) / chunk_size)
-        if num_qrs <= 10**chunk_digits-1:
+        prefix_format = "{}{:0>" + str(chunk_digits) + "}/{:0>" + str(chunk_digits)+"} "
+        chunk_size_chars = naive_chunk_size - len(prefix_format.format('N',0,0))
+        chunk_size_bytes = chunk_size_chars*6//8
+        num_normal = math.ceil(len(data) / chunk_size_bytes)
+        if use_erasure_coding:
+            num_erasures = math.ceil(num_normal/(1-erasure_rate))-num_normal
+        else:
+            num_erasures = 0
+        num_qrs = num_normal+num_erasures
+        if num_normal <= 10**chunk_digits-1:
             break
-    assert math.ceil(len(data)/chunk_size) == num_qrs <= 10**chunk_digits-1
+    assert math.ceil(len(data)/chunk_size_bytes) == num_normal <= 10**chunk_digits-1
+
+    chunks = []
+    for i, start in enumerate(range(0, len(data), chunk_size_bytes)):
+        chunks.append(('N', i, data[start:start+chunk_size_bytes]))
+    assert len(chunks) == num_normal
     
+    if use_erasure_coding:
+        for i, chunk in enumerate(generate_erasure(data, chunk_size_bytes, num_erasures)):
+            chunks.append(('E', i, chunk))
+    assert len(chunks) == num_qrs
+
+    chunks = [(prefix_format.format(piece_type, i+1, num_normal), piece) for piece_type, i, piece in chunks]
+    chunks = [(label, label.encode('ascii')+base64.b64encode(piece)) for label, piece in chunks]
+    assert len(chunks) == num_qrs
+    return chunks, chunk_digits
+
+def qr_codes(data, error_correction, version, scale, use_erasure_coding):
     qrs = []
-    for start in range(0, len(data), chunk_size):
+    qr_bytes = VERSION_TO_BYTES[error_correction][version]
+    chunks, chunk_digits = generate_chunks(data, qr_bytes, use_erasure_coding)
+    for label, chunk in chunks:
         qr = qrcode.QRCode(
             version=version,
             error_correction=error_correction,
             box_size=scale,
         )
-        chunk = prefix_format.format(start//chunk_size+1, num_qrs).encode('ascii') + data[start:start+chunk_size]
         qr.add_data(qrcode.util.QRData(chunk, mode=MODE), optimize=0)
         qr.make(fit=False)
-        qrs.append(qr)
-    assert len(qrs) == num_qrs
-    return chunk_digits, qrs
+        qrs.append((label, qr))
+    label_length = len(qrs[0][0])
+    assert all(len(qr[0])==label_length for qr in qrs)
+    return label_length, qrs
 
 def show_help(error=None):
     if error:
@@ -214,7 +289,6 @@ def generate_label(text, max_width, max_fontsize=24):
     font = PIL.ImageFont.truetype("DejaVuSans.ttf", 12)
     im = PIL.Image.new(mode="1", size=bbox, color=1) # black-and-white
     draw = PIL.ImageDraw.Draw(im)
-    print(draw.multiline_textsize(text))
     draw.multiline_text((0,0), text)
     return im
 
@@ -248,9 +322,10 @@ def main_backup(args):
     dpi = 300
     page_w_points, page_h_points = 500,600
     restore_file = None
-    use_base64 = False
     use_compression = True
+    use_erasure_coding = True
     output_path = None
+    GENERATE_DOCS = False # Manually generate example.png for the README when qr-backup changes
 
     # parse arguments
     pargs = []
@@ -258,14 +333,14 @@ def main_backup(args):
         arg, args = args[0], args[1:]
         if arg in ["-h", "--help"]:
             show_help()
-        elif arg == "--base64":
-            use_base64 = True
         elif arg == "--compress":
             use_compression = True
         elif arg == "--dpi":
             if len(args) < 1:
                 show_help("--dpi requires one argument (an integer dots-per-inch)")
             dpi, args = int(args[0]), args[1:]
+        elif arg == "--erasure-coding":
+            use_erasure_coding = True
         elif arg == "--error-correction":
             if len(args) < 1:
                 show_help("--error-correction requires one of: L M Q H")
@@ -279,6 +354,8 @@ def main_backup(args):
             GENERATE_DOCS=True
         elif arg == "--no-compress":
             use_compression = False
+        elif arg == "--no-erasure-coding":
+            use_erasure_coding = False
         elif arg == "--page":
             if len(args) < 2:
                 show_help("--page requires two arguments (decimal page width and height in inches)")
@@ -326,7 +403,7 @@ def main_backup(args):
         else:
             output_path = input_path+".qr.pdf"
 
-    nice_cmd = ' '.join([x for x in ["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_points), str(page_h_points), '--compress' if use_compression else '--no-compress', '--base64' if use_base64 else None, "--filename", restore_file] if x is not None])
+    nice_cmd = ' '.join([x for x in ["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_points), str(page_h_points), '--compress' if use_compression else '--no-compress', "--erasure-coding" if use_erasure_coding else "--no-erasure-coding", "--filename", restore_file] if x is not None])
     backup_date = datetime.date.today().strftime("%Y-%m-%d")
     logging.info("Original arguments were: {}".format(repr(args)))
     logging.info("Command arguments parsed. Equivalent command: {}".format(nice_cmd))
@@ -350,27 +427,11 @@ def main_backup(args):
     if use_compression:
         content = gzip.compress(content)
 
-    # Base-64 encoding
-    NEWLINE_ESCAPE = b"\b"
-    if NEWLINE_ESCAPE in content or b"\0" in content:
-        use_base64 = True
-
-    if use_base64:
-        # Deal with NEWLINE_ESCAPE and \0
-        content = base64.b64encode(content)
-    else:
-        # Escape newlines so zbar* --raw (newline-separated) is useful
-        content = content.replace(b"\n",NEWLINE_ESCAPE) # for easier reading back in, when QRs are printed newline-separated
-
     # Generate QR codes
-    code_digits, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
+    label_length, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale, use_erasure_coding=use_erasure_coding)
 
     # How to restore
-    restore_cmd = f'sort -u | grep "^N" | cut -c{code_digits*2+4}-'
-    if use_base64:
-        restore_cmd += ' | base64 -d'
-    else:
-        restore_cmd += ' | tr -d "\\n" | tr "\\b" "\\n"' # Update if NEWLINE_ESCAPE is updated.
+    restore_cmd = f'sort -u | grep "^N" | cut -c{label_length+1}- | base64 -d'
     if use_compression:
         restore_cmd += ' | gunzip'
     logging.info(f"Restore command is: {restore_cmd}")
@@ -381,7 +442,7 @@ def main_backup(args):
     HOWTO += f'\n  Step 1 (webcam): qr-backup --restore'
     HOWTO += f'\n  Step 1 (scanner): qr-backup --restore IMAGE1 IMAGE2 ...'
     HOWTO += '\nTo restore this file from the command line in Linux:'
-    HOWTO += f'\n  Step 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c2-{code_digits+1} # Scan each code at least once in any order'
+    HOWTO += f'\n  Step 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c1-{label_length+1} # Scan each code at least once in any order'
     HOWTO += f'\n  Step 1 (scanner option): zbarimg -q --raw *.png >>/tmp/qrs'
     howto_restore_cmd = restore_cmd.replace("sort -u", "sort -u /tmp/qrs")
     HOWTO += f'\n  Step 2 (restore): {howto_restore_cmd} >{restore_file}'
@@ -389,16 +450,16 @@ def main_backup(args):
     HOWTO += f'\nThis backup was generated on {backup_date} with: {nice_cmd}'
 
     # Calculate QR padding produced by qrcode module
-    example_qr = qrs[0].make_image().copy()
+    example_qr = qrs[0][1].make_image().copy()
     qr_bbox = PIL.ImageOps.invert(example_qr.copy().convert("L")).getbbox()
     qr_lpad, qr_tpad, qr_rpad, qr_bpad = qr_bbox[0], qr_bbox[1], example_qr.size[0]-qr_bbox[2], example_qr.size[1]-qr_bbox[3]
     qr_hpad, qr_vpad = qr_lpad + qr_rpad, qr_tpad + qr_bpad
 
     # Output QR codes with labels to Pillow Image objects
     labeled = []
-    for i, qr in enumerate(qrs):
+    for i, (qr_label, qr) in enumerate(qrs):
         img = qr.make_image()
-        label = f"code {i+1:0>{code_digits}}/{len(qrs):0>{code_digits}} {restore_file}"
+        label = f"code {qr_label} {restore_file}"
         labeled.append(add_label(img, label))
     logging.info(f"{len(qrs)} qr codes (at version {qr_version}) total")
 
@@ -470,20 +531,20 @@ def main_backup(args):
         zbarimg_present = subprocess.call(["which", "zbarimg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
 
         if zbarimg_present:
-            logging.info("Performing linux CLI restore check...")
             linux_test_command = "zbarimg --raw -q -Sdisable -Sqrcode.enable {} | {} | cmp {}".format(output_path, restore_cmd, input_path)
+            logging.info("Performing linux CLI restore check: " + linux_test_command)
             linux_success = (subprocess.call(linux_test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
-            logging.info("Performing qr-backup restore check...")
             self_test_command = ["python3", sys.argv[0], "--restore", "--sha256", sha256sum, output_path]
+            logging.info("Performing qr-backup restore check..." + ' '.join(self_test_command))
             self_test_success = (subprocess.call(self_test_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
 
             if linux_success and self_test_success:
                 logging.info("Automatic digital restore verification succeeded.")
             elif not linux_success:
-                logging.error("!!Automatic digital restore verification FAILED (status code {}). This indicates a bug in either zbarimg (more likely) or in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues".format(code))
+                logging.error("!!Automatic digital restore verification FAILED (linux CLI). This indicates a bug in either zbarimg (more likely) or in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
                 #sys.exit(1)
             else:
-                logging.error("!!Automatic digital restore verification FAILED (status code {}). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues".format(code))
+                logging.error("!!Automatic digital restore verification FAILED (qr-restore). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
                 #sys.exit(1)
         else:
                 logging.warning("Attempted digital restore verification, but zbarimg was not available")
@@ -529,33 +590,36 @@ def webcam_restore(use_display):
             if (yield line):
                 return
 
-def expected_codes(codes, code_count): # Returns a list of binary strings
+def expected_codes(code_count, erasure_rate=0.3): # Returns a list of binary strings
     code_digits = math.ceil(math.log(code_count+1,10))
-    return [f"N{i:>0{code_digits}}".encode('ascii') for i in range(1, code_count+1)]
+    num_erasures = math.ceil(code_count/(1-erasure_rate))-code_count
+    expected_normal = [f"N{i:>0{code_digits}}" for i in range(1, code_count+1)]
+    expected_erasure = [f"E{i:>0{code_digits}}" for i in range(1, num_erasures+1)]
+    return [x.encode('ascii') for x in expected_normal+expected_erasure]
 def restore_status(codes, code_count):
     if code_count is None:
         return f"{len(codes)}/??? codes read"
     else:
-        missing = [x.decode('ascii') for x in expected_codes(codes, code_count) if x not in codes]
+        missing = [x.decode('ascii') for x in expected_codes(code_count) if x not in codes]
         return f"Missing {len(missing)}/{code_count} codes: " + ' '.join(x[1:] for x in missing[:5]) + (" ..." if len(missing) > 5 else "")
 def is_complete(codes, code_count):
     if code_count is None:
         return False
-    return all(x in codes for x in expected_codes(codes, code_count))
-def do_restore(codes, code_count, use_compression, use_base64):
+    return len(codes) >= code_count
+def do_restore(codes, code_count, use_compression, use_erasure_coding):
     assert is_complete(codes, code_count)
-    content = b''.join(codes[x] for x in expected_codes(codes, code_count))
 
-    if use_base64 is True:
-        content = base64.b64decode(content)
-    elif use_base64 is None: # automatic determination
-        try:
-            content = base64.b64decode(content)
-            use_base64 = True
-        except Exception: # binascii.Error
-            use_base64 = False
-    if use_base64 is False:
-        content = content.replace(b"\b", b"\n") # reverse of custom newline encoding
+    decoded = {k: base64.b64decode(v) for k,v in codes.items()}
+    expected = sorted(expected_codes(code_count))
+    normal_symbols = [decoded.get(x) for x in [x for x in expected if x.startswith(b"N")]]
+    erasure_symbols = [decoded.get(x) for x in [x for x in expected if x.startswith(b"E")]]
+
+    erasureless_restore_possible = len([x for x in normal_symbols if x is None]) == 0
+    if erasureless_restore_possible or use_erasure_coding is False:
+        content = b''.join(normal_symbols)
+    else:
+        chunk_size = max(len(x) for x in normal_symbols if x is not None) # TODO: Fails if we don't get at least one non-final normal symbol
+        content = restore_erasure(normal_symbols, erasure_symbols, chunk_size)
 
     if use_compression is True:
         content = gzip.decompress(content)
@@ -577,8 +641,8 @@ def main_restore(args):
     use_display = True
 
     expected_sha256sum = None
-    use_base64 = None
     use_compression = None
+    use_erasure_coding = None
 
     # Parse command-line arguments
     pargs = []
@@ -586,14 +650,14 @@ def main_restore(args):
         arg, args = args[0], args[1:]
         if arg in ["-h", "--help"]:
             show_help()
-        elif arg == "--base64":
-            use_base64 = True
         elif arg == "--code-count":
             if len(args) < 1:
                 show_help("{} requires one argument".format(arg))
             code_count, args = int(args[0]), args[1:]
         elif arg == "--compress":
             use_compression = True
+        elif arg == "--erasure-coding":
+            use_erasure_coding = True
         elif arg == "--display":
             use_display = True
         elif arg == "--image-restore":
@@ -602,8 +666,8 @@ def main_restore(args):
             use_compression = False
         elif arg == "--no-display":
             use_display = False
-        elif arg == "--no-base64":
-            use_base64 = False
+        elif arg == "--no-erasure-coding":
+            use_erasure_coding = False
         elif arg in ["-o", "--output"]:
             if len(args) < 1:
                 show_help("{} requires one argument".format(arg))
@@ -686,6 +750,7 @@ def main_restore(args):
         else:
             assert False
         assert code_count is not None
+        assert code_num in expected_codes(code_count), "Unexpected code: {}".format(code_label.decode('ascii'))
 
         # Add the code
         if code_num in codes and codes[code_num] == content:
@@ -702,7 +767,7 @@ def main_restore(args):
     next(restore_generator, True)
 
     # Do the restore
-    content = do_restore(codes, code_count, use_compression=use_compression, use_base64=use_base64)
+    content = do_restore(codes, code_count, use_compression=use_compression, use_erasure_coding=use_erasure_coding)
 
     # Check the checksum
     sha256sum = hashlib.sha256(content).hexdigest()
