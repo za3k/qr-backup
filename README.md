@@ -39,18 +39,20 @@ Paper is not the best or most efficient storage method, so you can't back up big
 1. Run qr-backup on your file. On the Linux command-line, run `qr-backup <YOUR_FILE>`
 2. This generates a black-and-white PDF (`<YOUR_FILE>.qr.pdf`)
 3. Print the PDF on your printer
-4. Now you have your backup
 
 There are many command-line options available for advanced users. For a full list, read the [USAGE](docs/USAGE.md) doc online, or run `qr-backup --help` on your computer.
 
 ## Restoring a paper backup
 The restore process **does NOT require qr-backup**. It does require a command-linux Linux computer.
 
-1. Using the provided directions in the backup
-    - Use a webcam and `zbarcam` to scan the QR codes. 
-    - OR, use a scanner and `zbarimg` to scan the QR codes.
-2. Run the provided command. Now you have your original file.
-3. Verify your file was restored perfectly (using the included checksum).
+(Option 1): Use qr-backup, if you have it.
+- Webcam option
+    1. Run `qr-backup --restore`
+- Scanner option
+    1. Scan images using your scanner
+    2. Run `qr-backup --restore IMAGES`
+
+(Option 2): Use the linux command line, if you lose qr-backup. Commands are provided in the PDF printout. You will need to install `zbar`.
 
 ## More questions
 For more questions, see the [FAQ](docs/FAQ.md).

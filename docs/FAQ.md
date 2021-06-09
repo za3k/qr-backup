@@ -5,7 +5,7 @@
 - [How much of my backup can I lose and still restore?](#how-much-of-my-backup-can-i-lose-and-still-restore)
 - [Do you support Windows / why don't you support Windows?](#why-dont-you-support-windows)
 - [Do you support mac/OS X?](#why-dont-you-support-macos-x)
-- [Why doesn't the restore process use qr-backup?](#why-doesnt-the-restore-process-use-qr-backup)
+- [Why doesn't the restore process require qr-backup?](#why-doesnt-the-restore-process-require-qr-backup)
 - [How exactly does the backup/restore process work?](#how-exactly-does-the-backuprestore-process-work)
 - [Should I encrypt (password-protect) my backups?](#should-i-encrypt-password-protect-my-backups)
 - [How can I protect my paper backup?](#how-can-i-protect-my-paper-backup)
@@ -67,7 +67,7 @@ In the meantime, you could try [a different paper backup program](#what-other-pa
 ## Why don't you support mac/OS X?
 Both backup and restore probably work, actually, it's just not tested. `brew install zbar` and let me know in the issue tracker.
 
-## Why doesn't the restore process use qr-backup?
+## Why doesn't the restore process require qr-backup?
 Because I want the restore process to work when qr-backup has been lost to history. Also, I want users to understand how the backup/restore process works.
 
 ## How exactly does the backup/restore process work?
