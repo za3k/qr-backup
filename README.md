@@ -26,15 +26,18 @@ Paper is not the best or most efficient storage method, so you can't back up big
 - **A Linux computer and knowledge of how to use the command line**
 - A printer
 - python 3.6 or later
-- python-qrcode
 - python-pillow
+- python-qrcode
+- python-reedsolo
 - imagemagick
 - zbar (optional, used to digitally test restore)
 ### Restore Requirements
 - **A Linux computer and knowledge of how to use the command line**
 - **The restore process works without qr-backup installed**
 - A webcam or scanner
-- imagemagick
+- python 3.6 or later (if using qr-restore)
+- python-reedsolo (if using qr-restore)
+- imagemagick (needed for zbar)
 - zbar
 
 ## Making a backup
