@@ -12,10 +12,13 @@ import base64, datetime, gzip, hashlib, io, logging, math, os, subprocess, sys, 
 assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removing f-strings to fix it, sucka!"
 
 HELP='''Usage: qr-codes.py [OPTIONS] FILE
-Convert a binary file to a paper .pdf backup of QR codes.
+               qr-codes.py --restore [OPTIONS]
+               qr-codes.py --restore [OPTIONS] IMAGE [IMAGE ...]
+Convert a binary file to a paper .pdf backup of QR codes. With '--restore', read the QR codes in the paper backup using a webcam or scanner, to re-create the original file.
 
-The QR codes can be read back with a webcam or scanner to re-create the original file. Directions are included in the PDF. Make sure to test that you can actually read the QR size you select.
+Restore directions are included in the PDF, and do not require qr-backup. Make sure to test that you can actually read the QR size you select.
 
+Backup options:
     --dpi DPI
         Sets the print resolution of your printer. Default: 600
     --compress, --no-compress
@@ -24,7 +27,7 @@ The QR codes can be read back with a webcam or scanner to re-create the original
         Sets the error correction level. Options are L, M, Q, and H. Default: M (25%)
     --filename FILENAME
         Set the restored filename. Max 32 chars. Default: same as <FILE>
-    --output FILENAME, -o
+    --output FILENAME, -o FILENAME
         Set the output pdf path (redirecting stdout also works). Default: <FILE>.qr.pdf
     --page WIDTH_POINTS HEIGHT_POINTS
         Sets the usable size of the paper on your printer. This should NOT be 8.5 x 11 -- make sure to include margins. Default: 500x600
@@ -33,17 +36,38 @@ The QR codes can be read back with a webcam or scanner to re-create the original
     --scale SCALE
         Scale QR codes so that each small square in the QR code is SCALE x SCALE pixels. Default: 8
     --base64
-        Force base64 encoding. Default: turned on if needed
+        Force base64 encoding on. Default: turned on if needed
+
+Restore options:
+    --base64, --no-base64
+        Force base64 decoding (on/off). Default: automatic
+    --code-count COUNT, -c COUNT
+        Specify the number of total QR codes. Default: automatic
+    --compress, --no-compress
+        Force decompression (on/off). Default: automatic
+    --image-restore
+        Force image-based (scanner) restore. Default: automatic
+    --display, --no-display
+        For webcam scanning, (display/don't display) a webcam preview. Default: display
+    --output FILENAME, -o
+        Set the restore file path. Default: stdout
+    --sha256 SHA256
+        Include a sha256sum to check the file. Default: no check, prints checksum
+    --webcam-restore
+        Force webcam-based restore. Default: automatic
+
+Options for both:
     --verbose, -v
         Print more detailed information during run
 
 The QR mode is always binary with no QR compression.'''
 
-GENERATE_EXAMPLE = False # Manually generate example.png for the README when qr-backup changes
+GENERATE_DOCS = False # Manually generate example.png for the README when qr-backup changes
 L = qrcode.constants.ERROR_CORRECT_L
 M = qrcode.constants.ERROR_CORRECT_M # default, 25%
 Q = qrcode.constants.ERROR_CORRECT_Q
 H = qrcode.constants.ERROR_CORRECT_H
+MODE = qrcode.util.MODE_8BIT_BYTE # not settable
 
 VERSIONS = {
     # Binary bytes for each version size, 1-40
@@ -99,12 +123,14 @@ def grid_size(version):
 
 def qr_codes(data, error_correction, version, scale):
     naive_chunk_size = VERSION_TO_BYTES[error_correction][version]
+    num_qrs = 0
     for chunk_digits in range(1, 10):
-        prefix_format = "{:0>" + str(chunk_digits) + "}"
-        chunk_size = naive_chunk_size -len(prefix_format.format(0))
-        if len(data) / chunk_size < 10**chunk_digits-1:
+        prefix_format = "N{:0>" + str(chunk_digits) + "}/{:0>" + str(chunk_digits)+"} "
+        chunk_size = naive_chunk_size - len(prefix_format.format(0,0))
+        num_qrs = math.ceil(len(data) / chunk_size)
+        if num_qrs <= 10**chunk_digits-1:
             break
-    assert len(data) / chunk_size < 10**chunk_digits-1
+    assert math.ceil(len(data)/chunk_size) == num_qrs <= 10**chunk_digits-1
     
     qrs = []
     for start in range(0, len(data), chunk_size):
@@ -113,11 +139,11 @@ def qr_codes(data, error_correction, version, scale):
             error_correction=error_correction,
             box_size=scale,
         )
-        chunk = prefix_format.format(start//chunk_size+1).encode('ascii') + data[start:start+chunk_size]
+        chunk = prefix_format.format(start//chunk_size+1, num_qrs).encode('ascii') + data[start:start+chunk_size]
         qr.add_data(qrcode.util.QRData(chunk, mode=MODE), optimize=0)
         qr.make(fit=False)
         qrs.append(qr)
-    assert len(qrs) < 10**chunk_digits-1
+    assert len(qrs) == num_qrs
     return chunk_digits, qrs
 
 def show_help(error=None):
@@ -214,21 +240,19 @@ def v_merge(images):
         height += source_image.size[1]
     return im
 
-if __name__ == "__main__":
-    # defaults settings
+def main_backup(args):
+    # default settings
     qr_version = 10
     error_correction = qrcode.constants.ERROR_CORRECT_M # default, 25%
     scale = 8
     dpi = 300
     page_w_points, page_h_points = 500,600
-    MODE = qrcode.util.MODE_8BIT_BYTE # not settable
     restore_file = None
     use_base64 = False
     use_compression = True
     output_path = None
 
-    # parse command-line arguments
-    args = sys.argv[1:]
+    # parse arguments
     pargs = []
     while len(args) > 0:
         arg, args = args[0], args[1:]
@@ -251,11 +275,13 @@ if __name__ == "__main__":
                 show_help("--filename requires one argument")
             restore_file, args = args[0], args[1:]
             assert len(restore_file) > 0 and not restore_file.startswith("-")
+        elif arg == "--generate-docs": # Development only. Don't document or use please.
+            GENERATE_DOCS=True
         elif arg == "--no-compress":
             use_compression = False
         elif arg == "--page":
             if len(args) < 2:
-                show_help("--page requires two arguments (decimal page width and height in inches")
+                show_help("--page requires two arguments (decimal page width and height in inches)")
             page_w_points, page_h_points, args = float(args[0]), float(args[1]), args[2:]
         elif arg in ["-o", "--output"]:
             if len(args) < 1:
@@ -340,7 +366,7 @@ if __name__ == "__main__":
     code_digits, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
 
     # How to restore
-    restore_cmd = f'sort -u | cut -c{code_digits+1}-'
+    restore_cmd = f'sort -u | grep "^N" | cut -c{code_digits*2+4}-'
     if use_base64:
         restore_cmd += ' | base64 -d'
     else:
@@ -351,8 +377,11 @@ if __name__ == "__main__":
 
     # Instructions depend on the command line options, and the content of the file
     HOWTO = f'This is a paper backup of a computer file called: {restore_file}'
+    HOWTO += '\nTo restore this file using qr-backup:'
+    HOWTO += f'\n  Step 1 (webcam): qr-backup --restore'
+    HOWTO += f'\n  Step 1 (scanner): qr-backup --restore IMAGE1 IMAGE2 ...'
     HOWTO += '\nTo restore this file from the command line in Linux:'
-    HOWTO += f'\n  Step 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c1-{code_digits} # Scan each code at least once in any order'
+    HOWTO += f'\n  Step 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c2-{code_digits+1} # Scan each code at least once in any order'
     HOWTO += f'\n  Step 1 (scanner option): zbarimg -q --raw *.png >>/tmp/qrs'
     howto_restore_cmd = restore_cmd.replace("sort -u", "sort -u /tmp/qrs")
     HOWTO += f'\n  Step 2 (restore): {howto_restore_cmd} >{restore_file}'
@@ -407,7 +436,7 @@ if __name__ == "__main__":
         page_qrs = v_merge(page_rows)
         page_complete = add_label(page_qrs, HOWTO, side="top", max_fontsize=24, max_width=page_w_pixel-2)
 
-        if GENERATE_EXAMPLE:
+        if GENERATE_DOCS:
             page_h_pixel = page_complete.size[1]+2
         page = PIL.Image.new(mode="1", size=(page_w_pixel, page_h_pixel), color=1)
         page_draw = PIL.ImageDraw.Draw(page)
@@ -441,15 +470,270 @@ if __name__ == "__main__":
         zbarimg_present = subprocess.call(["which", "zbarimg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
 
         if zbarimg_present:
-            test_command = "zbarimg --raw -q -Sdisable -Sqrcode.enable {} | {} | cmp {}".format(output_path, restore_cmd, input_path)
-            code = subprocess.call(test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            if code == 0:
+            logging.info("Performing linux CLI restore check...")
+            linux_test_command = "zbarimg --raw -q -Sdisable -Sqrcode.enable {} | {} | cmp {}".format(output_path, restore_cmd, input_path)
+            linux_success = (subprocess.call(linux_test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
+            logging.info("Performing qr-backup restore check...")
+            self_test_command = ["python3", sys.argv[0], "--restore", "--sha256", sha256sum, output_path]
+            self_test_success = (subprocess.call(self_test_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
+
+            if linux_success and self_test_success:
                 logging.info("Automatic digital restore verification succeeded.")
-            else:
+            elif not linux_success:
                 logging.error("!!Automatic digital restore verification FAILED (status code {}). This indicates a bug in either zbarimg (more likely) or in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues".format(code))
+                #sys.exit(1)
+            else:
+                logging.error("!!Automatic digital restore verification FAILED (status code {}). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues".format(code))
                 #sys.exit(1)
         else:
                 logging.warning("Attempted digital restore verification, but zbarimg was not available")
 
-    if GENERATE_EXAMPLE:
+    if GENERATE_DOCS:
         pages[0].save("docs/example.png")
+        with open("docs/USAGE.md", "w") as f:
+            f.write("Output of `qr-backup --help`:\n")
+            f.write("\n")
+            f.write("```\n")
+            f.write(HELP)
+            f.write("\n")
+            f.write("```\n")
+
+def image_restore(image_paths):
+    # Special note: image_paths can include "-", in which case zbarimg will magically do the right thing
+    zbarimg_present = subprocess.call(["which", "zbarimg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+    if not zbarimg_present:
+        logging.fatal("zbarimg not present. install 'zbar' to scan files.")
+        sys.exit(2)
+
+    scan_command = ["zbarimg", "--raw", "-q", "-Sdisable", "-Sqrcode.enable"] + image_paths
+    result = subprocess.run(scan_command, capture_output=True)
+    for line in result.stdout.split(b"\n"):
+        if line != b'':
+            yield line
+
+def webcam_restore(use_display):
+    zbarimg_present = subprocess.call(["which", "zbarcam"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+    if not zbarimg_present:
+        logging.fatal("zbarcam not present. install 'zbar' to scan using your camera.")
+        sys.exit(2)
+
+    scan_command = ["zbarcam", "--raw", "-Sdisable", "-Sqrcode.enable"]
+    if not use_display:
+        scan_command.append("--nodisplay")
+
+    with subprocess.Popen(scan_command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL) as proc:
+        while True:
+            line = proc.stdout.readline()
+            if line == b'':
+                return
+            if (yield line):
+                return
+
+def expected_codes(codes, code_count): # Returns a list of binary strings
+    code_digits = math.ceil(math.log(code_count+1,10))
+    return [f"N{i:>0{code_digits}}".encode('ascii') for i in range(1, code_count+1)]
+def restore_status(codes, code_count):
+    if code_count is None:
+        return f"{len(codes)}/??? codes read"
+    else:
+        missing = [x.decode('ascii') for x in expected_codes(codes, code_count) if x not in codes]
+        return f"Missing {len(missing)}/{code_count} codes: " + ' '.join(x[1:] for x in missing[:5]) + (" ..." if len(missing) > 5 else "")
+def is_complete(codes, code_count):
+    if code_count is None:
+        return False
+    return all(x in codes for x in expected_codes(codes, code_count))
+def do_restore(codes, code_count, use_compression, use_base64):
+    assert is_complete(codes, code_count)
+    content = b''.join(codes[x] for x in expected_codes(codes, code_count))
+
+    if use_base64 is True:
+        content = base64.b64decode(content)
+    elif use_base64 is None: # automatic determination
+        try:
+            content = base64.b64decode(content)
+            use_base64 = True
+        except Exception: # binascii.Error
+            use_base64 = False
+    if use_base64 is False:
+        content = content.replace(b"\b", b"\n") # reverse of custom newline encoding
+
+    if use_compression is True:
+        content = gzip.decompress(content)
+    elif use_compression is None: # automatic determination
+        try:
+            content = gzip.decompress(content)
+            use_compression = True
+        except gzip.BadGzipFile:
+            use_compression = False
+    return content
+
+def main_restore(args):
+    # Default config
+    restore_method = None # Should be one of: None, "webcam", "images"
+
+    output_path = None # Should be one of: None (for use_stdout), file path
+    use_stdout = False
+    code_count = None # Should be one of: None (infer) or a number
+    use_display = True
+
+    expected_sha256sum = None
+    use_base64 = None
+    use_compression = None
+
+    # Parse command-line arguments
+    pargs = []
+    while len(args) > 0:
+        arg, args = args[0], args[1:]
+        if arg in ["-h", "--help"]:
+            show_help()
+        elif arg == "--base64":
+            use_base64 = True
+        elif arg == "--code-count":
+            if len(args) < 1:
+                show_help("{} requires one argument".format(arg))
+            code_count, args = int(args[0]), args[1:]
+        elif arg == "--compress":
+            use_compression = True
+        elif arg == "--display":
+            use_display = True
+        elif arg == "--image-restore":
+            restore_method = "images"
+        elif arg == "--no-compress":
+            use_compression = False
+        elif arg == "--no-display":
+            use_display = False
+        elif arg == "--no-base64":
+            use_base64 = False
+        elif arg in ["-o", "--output"]:
+            if len(args) < 1:
+                show_help("{} requires one argument".format(arg))
+            output_path, args = args[0], args[1:]
+        elif arg == "--sha256":
+            if len(args) < 1:
+                show_help("{} requires one argument".format(arg))
+            expected_sha256sum, args = args[0].lower(), args[1:]
+            if not all(x in "0123456789abcdef" for x in expected_sha256sum):
+                show_help("Not a valid SHA256: {}".format(expected_sha256sum))
+        elif arg in ["-v", "--verbose"]:
+            logging.basicConfig(level=logging.INFO)
+        elif arg == "--webcam-restore":
+            restore_method = "webcam"
+        elif arg == "-":
+            pargs.append(arg)
+        elif arg == "--":
+            # Stop parsing arguments
+            pargs, args = pargs + args, []
+        elif arg.startswith("-"):
+            show_help()
+        else:
+            pargs.append(arg)
+
+    assert len([x for x in pargs if x == "-"]) <= 1, "stdin can be listed as an image only once"
+    if restore_method is None and len(pargs) == 0 and not sys.stdin.isatty():
+        logging.debug("Reading from stdin")
+        restore_method = "images"
+        pargs = ["-"]
+    elif restore_method is None and len(pargs) == 0:
+        restore_method = "webcam"
+    elif restore_method is None and len(pargs) > 0:
+        restore_method = "images"
+
+    if output_path is None:
+        use_stdout = True
+
+    # Call a subprocess to do the restore
+    if restore_method == "images":
+        logging.info("image restore selected")
+        restore_generator = image_restore(pargs)
+    elif restore_method == "webcam":
+        logging.info("webcam restore selected")
+        restore_generator = webcam_restore(use_display=use_display)
+    else:
+        assert False
+
+    # Scan codes one at a time until done
+    codes = {}
+    while not is_complete(codes, code_count):
+        # Print status line
+        if restore_method == "webcam":
+            if code_count is None:
+                print("Hold up QR codes to the webcam in any order.",file=sys.stderr)
+            else:
+                print(restore_status(codes, code_count),file=sys.stderr)
+
+        # Read the next code as binary data
+        try:
+            read_code = next(restore_generator)
+        except StopIteration:
+            logging.fatal("Not enough codes could be read to restore the file. Exiting.")
+            sys.exit(3)
+
+        # Parse the label out
+        assert b"\n" not in read_code
+        code_label, content = read_code.split(b' ', maxsplit=1)
+        code_num, total = code_label.split(b'/')
+        total = int(total.decode('ascii'))
+        if code_count is None:
+            code_count = total
+        elif code_count == total:
+            pass
+        elif code_count != total and len(codes) == 0:
+            logging.fatal("Code count disagrees with --code-count option (Code={}, --code-count={})".format(code_label.decode('ascii'), code_count))
+            sys.exit(4)
+        elif code_count != total and len(codes) != 0:
+            logging.fatal("Code count disagrees for codes: {} & {}".format(code, next(iter(code.keys()))))
+            sys.exit(4)
+        else:
+            assert False
+        assert code_count is not None
+
+        # Add the code
+        if code_num in codes and codes[code_num] == content:
+            logging.info(f"Read duplicate code {code_num}: IDENTICAL")
+        elif code_num in codes and codes[code_num] != content:
+            logging.error(f"Read duplicate code {code_num}: DIVERGES")
+        elif code_num not in codes:
+            logging.info(f"Read new code {code_num}")
+        else:
+            assert False
+        codes[code_num] = content
+    # Close subprocess
+    # TODO: Sometimes one extra code needs to be read before it closes, fix that.
+    next(restore_generator, True)
+
+    # Do the restore
+    content = do_restore(codes, code_count, use_compression=use_compression, use_base64=use_base64)
+
+    # Check the checksum
+    sha256sum = hashlib.sha256(content).hexdigest()
+    exit_status = 0
+    logging.info("restored sha256sum: {}".format(sha256sum))
+    if expected_sha256sum is None:
+        logging.debug("no expected sha256sum was given")
+        print(f"sha256sum was as follows, please check against your paper backup: {sha256sum}", file=sys.stderr)
+    elif expected_sha256sum == sha256sum:
+        logging.debug("sha256sum matched")
+        #print("File verified using sha256 checksum.", file=sys.stderr)
+    elif sha256sum.startswith(expected_sha256sum):
+        logging.debug("sha256sum partial matched")
+        print(f"The actual sha256sum begins with checksum given on the command line, but it was not complete. The full checksum was: {sha256sum}", file=sys.stderr)
+    else:
+        logging.error("sha256sum did not match")
+        exit_status = 4
+        print(f"!!The restored file does NOT match the expected checksum. Restoring anyway.", file=sys.stderr)
+
+    # Write the output
+    if use_stdout:
+        sys.stdout.buffer.write(content)
+    else:
+        with open(output_path, "wb") as f:
+            f.write(content)
+    sys.exit(exit_status)
+
+if __name__ == "__main__":
+    # parse command-line arguments
+    args = sys.argv[1:]
+    if len(args) > 1 and args[0] in ["-r", "--restore"]:
+        main_restore(args[1:])
+    else:
+        main_backup(args)
