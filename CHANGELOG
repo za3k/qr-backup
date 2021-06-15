@@ -5,6 +5,7 @@ v1.1 (not released)
 - Bugfix (#7): The instructions are always full-page-width now.
 - Code cleanup: QR code content generation, and actual QR code generation is separated
 - Base64 encoding is now done within a QR code, not across QR codes. This is to support future erasure coding.
+- Bugfix (#17): Improved the CLI restore to work with multiple consecutive restores
 
 v1.0
 - Generate a PDF from any file

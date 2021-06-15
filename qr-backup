@@ -389,8 +389,8 @@ def main_backup(args):
     HOWTO += f'\n  Step 1 (webcam): qr-backup --restore'
     HOWTO += f'\n  Step 1 (scanner): qr-backup --restore IMAGE1 IMAGE2 ...'
     HOWTO += '\nTo restore this file from the command line in Linux:'
-    HOWTO += f'\n  Step 1 (webcam option): zbarcam --raw | tee -a /tmp/qrs | cut -c2-{code_digits+1} # Scan each code at least once in any order'
-    HOWTO += f'\n  Step 1 (scanner option): zbarimg -q --raw *.png >>/tmp/qrs'
+    HOWTO += f'\n  Step 1 (webcam option): zbarcam --raw | tee /tmp/qrs | cut -c1-{code_digits+1} # Scan each code at least once in any order'
+    HOWTO += f'\n  Step 1 (scanner option): zbarimg -q --raw *.png >/tmp/qrs'
     howto_restore_cmd = restore_cmd.replace("sort -u", "sort -u /tmp/qrs")
     HOWTO += f'\n  Step 2 (restore): {howto_restore_cmd} >{restore_file}'
     HOWTO += f'\n  Step 3 (verify): sha256sum {restore_file} # {sha256sum}'
