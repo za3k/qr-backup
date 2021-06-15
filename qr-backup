@@ -351,7 +351,10 @@ def main_backup(args):
             output_path = input_path+".qr.pdf"
 
     nice_cmd = ' '.join([x for x in ["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_points), str(page_h_points), '--compress' if use_compression else '--no-compress', "--filename", restore_file] if x is not None])
-    backup_date = datetime.date.today().strftime("%Y-%m-%d")
+    if GENERATE_DOCS:
+        backup_date = "2021-06-15"
+    else:
+        backup_date = datetime.date.today().strftime("%Y-%m-%d")
     logging.info("Original arguments were: {}".format(repr(args)))
     logging.info("Command arguments parsed. Equivalent command: {}".format(nice_cmd))
 
@@ -372,7 +375,7 @@ def main_backup(args):
 
     # (Gzip) Compression
     if use_compression:
-        content = gzip.compress(content)
+        content = gzip.compress(content, mtime=0)
 
     # Generate QR codes
     code_digits, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
@@ -460,15 +463,17 @@ def main_backup(args):
         page.paste(page_num, (page.size[0]-page_num.size[0]-1-qr_rpad, page.size[1]-page_num.size[1]-11)) # Page num in bottom-right
         pages.append(page)
 
+    # PIL's pdf writer needs to mmap, so it can't accept sys.stdout directly
+    tmp_pdf = io.BytesIO()
+    pages[0].save(tmp_pdf, format="pdf", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}", creationDate=backup_date, modDate=backup_date)
+
     if use_stdout: 
         # Write PDF to stdout
-        # PIL's pdf writer needs to mmap, so it can't accept sys.stdout directly
-        tmp_pdf = io.BytesIO() 
-        pages[0].save(tmp_pdf, format="pdf", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}")
         sys.stdout.buffer.write(tmp_pdf.getbuffer())
     else:
         # Write PDF to file
-        pages[0].save(output_path, format="pdf", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}")
+        with open(output_path, "wb") as f:
+            f.write(tmp_pdf.getbuffer())
 
     if use_stdout or use_stdin:
         # Can't test restore yet
