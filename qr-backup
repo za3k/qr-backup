@@ -399,7 +399,7 @@ def main_backup(args):
     HOWTO += f'\n  Step 1 (scanner option): zbarimg -q --raw *.png >/tmp/qrs'
     howto_restore_cmd = restore_cmd.replace("sort -u", "sort -u /tmp/qrs")
     HOWTO += f'\n  Step 2 (restore): {howto_restore_cmd} >{restore_file}'
-    HOWTO += f'\n  Step 3 (verify): sha256sum {restore_file} # {sha256sum}'
+    HOWTO += f'\n  Step 3 (verify): sha256sum {restore_file} # {sha256sum}, {original_len} bytes'
     HOWTO += f'\nThis backup was generated on {backup_date} with: {nice_cmd}'
 
     # Calculate QR padding produced by qrcode module

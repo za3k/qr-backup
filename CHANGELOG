@@ -1,6 +1,7 @@
 v1.1 (not released)
 - Automatic digital restore check added, which uses zbarimg to test restore from the digital .pdf.
 - Added `-o`, `--output` option to give the name of an output file.
+- Added the original files of the file to the human-readable output.
 - Base64 encoding is now done within a QR code, not across QR codes. This is to support future erasure coding.
 - Bugfix (#6): Reading from stdin did not work correctly. Now it should.
 - Bugfix (#7): The instructions are always full-page-width now.
