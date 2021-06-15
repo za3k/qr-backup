@@ -366,12 +366,15 @@ def main_backup(args):
 
     # read the entire file into memory
     try:
-        content = f.read()
+        original_content = f.read()
     finally:
         f.close()
-    sha256sum = hashlib.sha256(content).hexdigest()
-    original_len = len(content)
+
+    sha256sum = hashlib.sha256(original_content).hexdigest()
+    original_len = len(original_content)
     logging.info(f"read file {restore_file} (sha {sha256sum}, {original_len/1000}KB)")
+
+    content = original_content
 
     # (Gzip) Compression
     if use_compression:
@@ -475,14 +478,19 @@ def main_backup(args):
         with open(output_path, "wb") as f:
             f.write(tmp_pdf.getbuffer())
 
-    if use_stdout or use_stdin:
-        # Can't test restore yet
-        logging.warning("Automatic digital restore skipped because qr-backup is being used in a pipe.")
-    else:
-        # Test restore
-        zbarimg_present = subprocess.call(["which", "zbarimg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+    zbarimg_present = subprocess.call(["which", "zbarimg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+    if zbarimg_present:
+        if use_stdout or use_stdin:
+            logging.info("Performing linux CLI restore check...")
+            linux_test_command = "zbarimg --raw -q -Sdisable -Sqrcode.enable - | {}".format(restore_cmd)
+            linux_test = subprocess.run(linux_test_command, shell=True, capture_output=True, input=tmp_pdf.getbuffer())
+            linux_success = linux_test.returncode==0 and linux_test.stdout == original_content
 
-        if zbarimg_present:
+            logging.info("Performing qr-backup restore check...")
+            self_test_command = ["python3", sys.argv[0], "--restore", "-", "--sha256", sha256sum]
+            self_test = subprocess.run(self_test_command, capture_output=True, input=tmp_pdf.getbuffer())
+            self_test_success = self_test.returncode==0
+        else:
             logging.info("Performing linux CLI restore check...")
             linux_test_command = "zbarimg --raw -q -Sdisable -Sqrcode.enable {} | {} | cmp {}".format(output_path, restore_cmd, input_path)
             linux_success = (subprocess.call(linux_test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
@@ -490,16 +498,16 @@ def main_backup(args):
             self_test_command = ["python3", sys.argv[0], "--restore", "--sha256", sha256sum, output_path]
             self_test_success = (subprocess.call(self_test_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
 
-            if not linux_success:
-                logging.error("!!Automatic digital restore verification FAILED (linux CLI). This indicates a bug in either zbarimg (more likely) or in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
-                #sys.exit(1)
-            elif not self_test_success:
-                logging.error("!!Automatic digital restore verification FAILED (self-test). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
-                #sys.exit(1)
-            else:
-                logging.info("Automatic digital restore verification succeeded.")
+        if not linux_success:
+            logging.error("!!Automatic digital restore verification FAILED (linux CLI). This indicates a bug in either zbarimg (more likely) or in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
+            #sys.exit(1)
+        elif not self_test_success:
+            logging.error("!!Automatic digital restore verification FAILED (self-test). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
+            #sys.exit(1)
         else:
-                logging.warning("Attempted digital restore verification, but zbarimg was not available")
+            logging.info("Automatic digital restore verification succeeded.")
+    else:
+        logging.warning("Attempted digital restore verification, but zbarimg was not available")
 
     if GENERATE_DOCS:
         pages[0].save("docs/example.png")

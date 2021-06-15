@@ -1,12 +1,13 @@
 v1.1 (not released)
-- Automatic digital restore check added, which uses zbarimg to test restore from the digital .pdf. The automatic check is only performed when input and output are files.
+- Automatic digital restore check added, which uses zbarimg to test restore from the digital .pdf.
 - Added `-o`, `--output` option to give the name of an output file.
+- Base64 encoding is now done within a QR code, not across QR codes. This is to support future erasure coding.
 - Bugfix (#6): Reading from stdin did not work correctly. Now it should.
 - Bugfix (#7): The instructions are always full-page-width now.
-- Code cleanup: QR code content generation, and actual QR code generation is separated
-- Base64 encoding is now done within a QR code, not across QR codes. This is to support future erasure coding.
-- Bugfix (#17): Improved the CLI restore to work with multiple consecutive restores
 - Bugfix (#15): Generated PDF is always identical (except the included date)
+- Bugfix (#17): Improved the CLI restore to work with multiple consecutive restores
+- Bugfix (#18): Support digital restore check when qr-backup is used in a pipeline, by keeping input and output in memory.
+- Code cleanup: QR code content generation, and actual QR code generation is separated
 
 v1.0
 - Generate a PDF from any file
