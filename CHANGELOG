@@ -3,6 +3,8 @@ v1.1 (not released)
 - Added `-o`, `--output` option to give the name of an output file.
 - Bugfix (#6): Reading from stdin did not work correctly. Now it should.
 - Bugfix (#7): The instructions are always full-page-width now.
+- Code cleanup: QR code content generation, and actual QR code generation is separated
+- Base64 encoding is now done within a QR code, not across QR codes. This is to support future erasure coding.
 
 v1.0
 - Generate a PDF from any file

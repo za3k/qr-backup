@@ -75,18 +75,19 @@ The exact commands to run are described in the README and on the printed backup.
 
 The backup process:
 - If compression is on, data is compressed using gzip
-- If base64-encoding is needed (compression is on, or the file contains unusual characters, or the command line option is set) then the data is base64 encoded to turn it into normal-looking ascii.
 - The data is now preprocessed.
-- The data is split into small chunks, about 2K each with the default settings. If there are 50 chunks, the number 01 thru 50 is put at the start of each chunk, to label them.
-- Each chunk is printed as a QR code on the paper, and labeled with the code number.
+- The data is split into small chunks, about 2K each with the default settings.
+- Each chunk is base64 encoded.
+- Labels are added. If there are 50 chunks, the first is labeled "N01/50" and the last is "N50/50".
+- Each chunk is printed as a QR code on the paper, and labeled with the same code label.
 
 The restore process is
-- First, the user scans each QR code (in any order). Since each code contains the code number (01-50), the computer sorts everything out, making sure each code 01-50 is present exactly once.
-- The codes are put in order (and duplicates removed). The 01-50 labels are removed, and the chunks are appended together.
+- First, the user scans each QR code (in any order). 
+- Since each code contains the code number (01-50), the computer sorts everything out, making sure each code 01-50 is present exactly once. The codes are put in order (and duplicates removed).
+- The "N01/50" thru "N50/50" labels are removed. Any chunk with an unexpected label is thrown out (for forwards compatibility).
+- Each chunk is base64-decoded
 - The chunks are appended together. This has restored the preprocessed data.
-- If the data was base64-encoded, it's now base64-decoded
-- If the data was compressed, it's now decompressed
-- The file is now restored.
+- If the data was compressed, it's decompressed. The file is now restored.
 - The file is checksummed using sha256, which verifies the file is perfectly restored.
 
 ## Should I encrypt (password-protect) my backups?

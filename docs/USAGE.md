@@ -12,7 +12,7 @@ Backup options:
     --dpi DPI
         Sets the print resolution of your printer. Default: 600
     --compress, --no-compress
-        This gives a more compact backup, but partial recovery is impossible. Turns base-64 encoding on. Default: compressed
+        This gives a more compact backup, but partial recovery is impossible. Default: compressed
     --error-correction CORRECTION
         Sets the error correction level. Options are L, M, Q, and H. Default: M (25%)
     --filename FILENAME
@@ -25,12 +25,8 @@ Backup options:
         Uses QR codes, version VERSION. Versions range from 1-40. The bigger the version, the harder to scan but the more data per code. Default: 10
     --scale SCALE
         Scale QR codes so that each small square in the QR code is SCALE x SCALE pixels. Default: 8
-    --base64
-        Force base64 encoding on. Default: turned on if needed
 
 Restore options:
-    --base64, --no-base64
-        Force base64 decoding (on/off). Default: automatic
     --code-count COUNT, -c COUNT
         Specify the number of total QR codes. Default: automatic
     --compress, --no-compress

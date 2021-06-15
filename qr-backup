@@ -22,7 +22,7 @@ Backup options:
     --dpi DPI
         Sets the print resolution of your printer. Default: 600
     --compress, --no-compress
-        This gives a more compact backup, but partial recovery is impossible. Turns base-64 encoding on. Default: compressed
+        This gives a more compact backup, but partial recovery is impossible. Default: compressed
     --error-correction CORRECTION
         Sets the error correction level. Options are L, M, Q, and H. Default: M (25%)
     --filename FILENAME
@@ -35,12 +35,8 @@ Backup options:
         Uses QR codes, version VERSION. Versions range from 1-40. The bigger the version, the harder to scan but the more data per code. Default: 10
     --scale SCALE
         Scale QR codes so that each small square in the QR code is SCALE x SCALE pixels. Default: 8
-    --base64
-        Force base64 encoding on. Default: turned on if needed
 
 Restore options:
-    --base64, --no-base64
-        Force base64 decoding (on/off). Default: automatic
     --code-count COUNT, -c COUNT
         Specify the number of total QR codes. Default: automatic
     --compress, --no-compress
@@ -62,88 +58,119 @@ Options for both:
 
 The QR mode is always binary with no QR compression.'''
 
-GENERATE_DOCS = False # Manually generate example.png for the README when qr-backup changes
 L = qrcode.constants.ERROR_CORRECT_L
 M = qrcode.constants.ERROR_CORRECT_M # default, 25%
 Q = qrcode.constants.ERROR_CORRECT_Q
 H = qrcode.constants.ERROR_CORRECT_H
-MODE = qrcode.util.MODE_8BIT_BYTE # not settable
+MODE = qrcode.util.MODE_8BIT_BYTE # not settable. and no, base64 encoded data doesn't bit in alphanumeric (there are only 44 chars)
 
-VERSIONS = {
-    # Binary bytes for each version size, 1-40
+VERSIONS_BITS = {
+    # Binary bits for each version size, 1-40
     # Source: qrcode.com (DENSO WAVE)
     # Order is L,M,Q,H on right
-    1: [17,14,11,7],
-    2: [32,26,20,14],
-    3: [53,42,32,24],
-    4: [78,62,46,34],
-    5: [106,84,60,44],
-    6: [134,106,74,58],
-    7: [154,122,86,64],
-    8: [192,152,108,84],
-    9: [230,180,130,98],
-    10: [271,213,151,119],
-    11: [321,251,177,137],
-    12: [367,287,203,155],
-    13: [425,331,241,177],
-    14: [458,362,258,194],
-    15: [520,412,292,220],
-    16: [586,450,322,250],
-    17: [644,504,364,280],
-    18: [718,560,394,310],
-    19: [792,624,442,338],
-    20: [858,666,482,382],
-    21: [929,711,509,403],
-    22: [1003,779,565,439],
-    23: [1091,857,611,461],
-    24: [1171,911,661,511],
-    25: [1273,997,715,535],
-    26: [1367,1059,751,593],
-    27: [1465,1125,805,625],
-    28: [1528,1190,868,658],
-    29: [1628,1264,908,698],
-    30: [1732,1370,982,742],
-    31: [1840,1452,1030,790],
-    32: [1952,1538,1112,842],
-    33: [2068,1628,1168,898],
-    34: [2188,1722,1228,958],
-    35: [2303,1809,1283,983],
-    36: [2431,1911,1351,1051],
-    37: [2563,1989,1423,1093],
-    38: [2699,2099,1499,1139],
-    39: [2809,2213,1579,1219],
-    40: [2953,2331,1663,1273],
+    1: [152,128,104,72],
+    2: [272,224,176,128],
+    3: [440,352,272,208],
+    4: [640,512,384,288],
+    5: [864,688,496,368],
+    6: [1088,864,608,480],
+    7: [1248,992,704,528],
+    8: [1552,1232,880,688],
+    9: [1856,1456,1056,800],
+    10: [2192,1728,1232,976],
+    11: [2592,2032,1440,1120],
+    12: [2960,2320,1648,1264],
+    13: [3424,2672,1952,1440],
+    14: [3688,2920,2088,1576],
+    15: [4184,3320,2360,1784],
+    16: [4712,3624,2600,2024],
+    17: [5176,4056,2936,2264],
+    18: [5768,4504,3176,2504],
+    19: [6360,5016,3560,2728],
+    20: [6888,5352,3880,3080],
+    21: [7456,5712,4096,3248],
+    22: [8048,6256,4544,3536],
+    23: [8752,6880,4912,3712],
+    24: [9392,7312,5312,4112],
+    25: [10208,8000,5744,4304],
+    26: [10960,8496,6032,4768],
+    27: [11744,9024,6464,5024],
+    28: [12248,9544,6968,5288],
+    29: [13048,10136,7288,5608],
+    30: [13880,10984,7880,5960],
+    31: [14744,11640,8264,6344],
+    32: [15640,12328,8920,6760],
+    33: [16568,13048,9368,7208],
+    34: [17528,13800,9848,7688],
+    35: [18448,14496,10288,7888],
+    36: [19472,15312,10832,8432],
+    37: [20528,15936,11408,8768],
+    38: [21616,16816,12016,9136],
+    39: [22496,17728,12656,9776],
+    40: [23648,18672,13328,10208],
 }
-VERSION_TO_BYTES = {
-    quality: {version: sizes[place] for version, sizes in VERSIONS.items()} for place, quality in enumerate([L,M,Q,H])
-}
+def qr_size_chars(version, mode, quality):
+    assert mode not in [qrcode.util.MODE_NUMBER, qrcode.util.MODE_KANJI]
+    assert mode in [qrcode.util.MODE_ALPHA_NUM, qrcode.util.MODE_8BIT_BYTE]
 
-def grid_size(version):
+    bits = VERSIONS_BITS[version][[L,M,Q,H].index(quality)]
+    data_bits = bits-4-qrcode.util.length_in_bits(mode, version)
+    if mode == qrcode.util.MODE_NUMBER: # Not verified
+        return (data_bits//10)*3 + [0,0,0,0,1,1,1,2,2,2][data_bits%10]
+    elif mode == qrcode.util.MODE_ALPHA_NUM: # Not verified
+        return (data_bits//11)*2 + [0,0,0,0,0,0,1,1,1,1,1][data_bits%11]
+    elif mode == qrcode.util.MODE_8BIT_BYTE: # Verified
+        return math.floor(data_bits/8)
+    elif mode == qrcode.util.MODE_KANJI: # Not verified
+        return math.floor(data_bits/13)
+
+def qr_grid_size(version):
     return version*4+17
 
-def qr_codes(data, error_correction, version, scale):
-    naive_chunk_size = VERSION_TO_BYTES[error_correction][version]
+def generate_chunks(data, chunk_size_base64):
+    """
+    Return a bunch of chunks to put in QRs.
+    The returned values must not contain "\n" due to the use of zbarimg/zbarcam, so we base-64 encode everything at the QR level
+    """
+    
     num_qrs = 0
     for chunk_digits in range(1, 10):
         prefix_format = "N{:0>" + str(chunk_digits) + "}/{:0>" + str(chunk_digits)+"} "
-        chunk_size = naive_chunk_size - len(prefix_format.format(0,0))
-        num_qrs = math.ceil(len(data) / chunk_size)
+        payload_size_base64 = chunk_size_base64 - len(prefix_format.format(0,0))
+        payload_size_bytes = math.floor(payload_size_base64 / 4) * 3 # groups of 4 base-64 digits encode 3 bytes each
+        num_qrs = math.ceil(len(data) / payload_size_bytes)
         if num_qrs <= 10**chunk_digits-1:
             break
-    assert math.ceil(len(data)/chunk_size) == num_qrs <= 10**chunk_digits-1
+    assert math.ceil(len(data)/payload_size_bytes) == num_qrs <= 10**chunk_digits-1
+    chunks = []
+    for i, start in enumerate(range(0, len(data), payload_size_bytes)):
+        prefix = prefix_format.format(i+1, num_qrs).encode('ascii')
+        chunk_data_bytes = data[start:start+payload_size_bytes]
+        assert len(chunk_data_bytes) <= payload_size_bytes
+        chunk_data_base64 = base64.b64encode(chunk_data_bytes)
+        assert len(chunk_data_base64) <= payload_size_base64
+        chunk_content = prefix+chunk_data_base64
+        assert len(chunk_content) <= chunk_size_base64
+        chunks.append(chunk_content)
+    assert len(chunks) == num_qrs
+    return chunk_digits, chunks
+
+def qr_codes(data, error_correction, version, scale):
+    naive_chunk_size = qr_size_chars(version, MODE, error_correction)
+    chunk_digits, chunks = generate_chunks(data, naive_chunk_size)
     
     qrs = []
-    for start in range(0, len(data), chunk_size):
+    for chunk in chunks:
         qr = qrcode.QRCode(
             version=version,
             error_correction=error_correction,
             box_size=scale,
         )
-        chunk = prefix_format.format(start//chunk_size+1, num_qrs).encode('ascii') + data[start:start+chunk_size]
+        assert len(chunk) <= naive_chunk_size
         qr.add_data(qrcode.util.QRData(chunk, mode=MODE), optimize=0)
         qr.make(fit=False)
         qrs.append(qr)
-    assert len(qrs) == num_qrs
+
     return chunk_digits, qrs
 
 def show_help(error=None):
@@ -214,7 +241,6 @@ def generate_label(text, max_width, max_fontsize=24):
     font = PIL.ImageFont.truetype("DejaVuSans.ttf", 12)
     im = PIL.Image.new(mode="1", size=bbox, color=1) # black-and-white
     draw = PIL.ImageDraw.Draw(im)
-    print(draw.multiline_textsize(text))
     draw.multiline_text((0,0), text)
     return im
 
@@ -243,14 +269,14 @@ def v_merge(images):
 def main_backup(args):
     # default settings
     qr_version = 10
-    error_correction = qrcode.constants.ERROR_CORRECT_M # default, 25%
+    error_correction = M # default, 25%
     scale = 8
     dpi = 300
     page_w_points, page_h_points = 500,600
     restore_file = None
-    use_base64 = False
     use_compression = True
     output_path = None
+    GENERATE_DOCS = False # Manually generate example.png for the README when qr-backup changes
 
     # parse arguments
     pargs = []
@@ -258,8 +284,6 @@ def main_backup(args):
         arg, args = args[0], args[1:]
         if arg in ["-h", "--help"]:
             show_help()
-        elif arg == "--base64":
-            use_base64 = True
         elif arg == "--compress":
             use_compression = True
         elif arg == "--dpi":
@@ -326,7 +350,7 @@ def main_backup(args):
         else:
             output_path = input_path+".qr.pdf"
 
-    nice_cmd = ' '.join([x for x in ["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_points), str(page_h_points), '--compress' if use_compression else '--no-compress', '--base64' if use_base64 else None, "--filename", restore_file] if x is not None])
+    nice_cmd = ' '.join([x for x in ["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_points), str(page_h_points), '--compress' if use_compression else '--no-compress', "--filename", restore_file] if x is not None])
     backup_date = datetime.date.today().strftime("%Y-%m-%d")
     logging.info("Original arguments were: {}".format(repr(args)))
     logging.info("Command arguments parsed. Equivalent command: {}".format(nice_cmd))
@@ -350,27 +374,11 @@ def main_backup(args):
     if use_compression:
         content = gzip.compress(content)
 
-    # Base-64 encoding
-    NEWLINE_ESCAPE = b"\b"
-    if NEWLINE_ESCAPE in content or b"\0" in content:
-        use_base64 = True
-
-    if use_base64:
-        # Deal with NEWLINE_ESCAPE and \0
-        content = base64.b64encode(content)
-    else:
-        # Escape newlines so zbar* --raw (newline-separated) is useful
-        content = content.replace(b"\n",NEWLINE_ESCAPE) # for easier reading back in, when QRs are printed newline-separated
-
     # Generate QR codes
     code_digits, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
 
     # How to restore
-    restore_cmd = f'sort -u | grep "^N" | cut -c{code_digits*2+4}-'
-    if use_base64:
-        restore_cmd += ' | base64 -d'
-    else:
-        restore_cmd += ' | tr -d "\\n" | tr "\\b" "\\n"' # Update if NEWLINE_ESCAPE is updated.
+    restore_cmd = f'sort -u | grep "^N" | cut -c{code_digits*2+4}- | base64 -d'
     if use_compression:
         restore_cmd += ' | gunzip'
     logging.info(f"Restore command is: {restore_cmd}")
@@ -477,14 +485,14 @@ def main_backup(args):
             self_test_command = ["python3", sys.argv[0], "--restore", "--sha256", sha256sum, output_path]
             self_test_success = (subprocess.call(self_test_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
 
-            if linux_success and self_test_success:
-                logging.info("Automatic digital restore verification succeeded.")
-            elif not linux_success:
-                logging.error("!!Automatic digital restore verification FAILED (status code {}). This indicates a bug in either zbarimg (more likely) or in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues".format(code))
+            if not linux_success:
+                logging.error("!!Automatic digital restore verification FAILED (linux CLI). This indicates a bug in either zbarimg (more likely) or in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
+                #sys.exit(1)
+            elif not self_test_success:
+                logging.error("!!Automatic digital restore verification FAILED (self-test). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
                 #sys.exit(1)
             else:
-                logging.error("!!Automatic digital restore verification FAILED (status code {}). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues".format(code))
-                #sys.exit(1)
+                logging.info("Automatic digital restore verification succeeded.")
         else:
                 logging.warning("Attempted digital restore verification, but zbarimg was not available")
 
@@ -542,20 +550,14 @@ def is_complete(codes, code_count):
     if code_count is None:
         return False
     return all(x in codes for x in expected_codes(codes, code_count))
-def do_restore(codes, code_count, use_compression, use_base64):
+def do_restore(codes, code_count, use_compression):
     assert is_complete(codes, code_count)
-    content = b''.join(codes[x] for x in expected_codes(codes, code_count))
 
-    if use_base64 is True:
-        content = base64.b64decode(content)
-    elif use_base64 is None: # automatic determination
-        try:
-            content = base64.b64decode(content)
-            use_base64 = True
-        except Exception: # binascii.Error
-            use_base64 = False
-    if use_base64 is False:
-        content = content.replace(b"\b", b"\n") # reverse of custom newline encoding
+    # Base-64 decoding is per-qr-code
+    decoded = {k: base64.b64decode(v) for k,v in codes.items()}
+
+    # Concat
+    content = b''.join(decoded[x] for x in expected_codes(codes, code_count))
 
     if use_compression is True:
         content = gzip.decompress(content)
@@ -577,7 +579,6 @@ def main_restore(args):
     use_display = True
 
     expected_sha256sum = None
-    use_base64 = None
     use_compression = None
 
     # Parse command-line arguments
@@ -586,8 +587,6 @@ def main_restore(args):
         arg, args = args[0], args[1:]
         if arg in ["-h", "--help"]:
             show_help()
-        elif arg == "--base64":
-            use_base64 = True
         elif arg == "--code-count":
             if len(args) < 1:
                 show_help("{} requires one argument".format(arg))
@@ -602,8 +601,6 @@ def main_restore(args):
             use_compression = False
         elif arg == "--no-display":
             use_display = False
-        elif arg == "--no-base64":
-            use_base64 = False
         elif arg in ["-o", "--output"]:
             if len(args) < 1:
                 show_help("{} requires one argument".format(arg))
@@ -702,7 +699,7 @@ def main_restore(args):
     next(restore_generator, True)
 
     # Do the restore
-    content = do_restore(codes, code_count, use_compression=use_compression, use_base64=use_base64)
+    content = do_restore(codes, code_count, use_compression=use_compression)
 
     # Check the checksum
     sha256sum = hashlib.sha256(content).hexdigest()
