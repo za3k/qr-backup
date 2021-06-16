@@ -8,55 +8,150 @@ Requirements to make the PDF: python 'qrcode' library, imagemagick, img2pdf
 Requirements to restore from the PDF: zbar (only)
 """
 import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageOps
-import base64, datetime, gzip, hashlib, io, logging, math, os, subprocess, sys, qrcode
+import base64, datetime, gzip, hashlib, io, logging, math, os, subprocess, sys, textwrap, qrcode
 assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removing f-strings to fix it, sucka!"
 
 HELP='''Usage: qr-codes.py [OPTIONS] FILE
                qr-codes.py --restore [OPTIONS]
                qr-codes.py --restore [OPTIONS] IMAGE [IMAGE ...]
-Convert a binary file to a paper .pdf backup of QR codes. With '--restore', read the QR codes in the paper backup using a webcam or scanner, to re-create the original file.
+Convert a binary file to a paper .pdf backup of QR codes. With '--restore',
+read the QR codes in the paper backup using a webcam or scanner, to re-create
+the original file.
 
-Restore directions are included in the PDF, and do not require qr-backup. Make sure to test that you can actually read the QR size you select.
+Restore directions are included in the PDF, and do not require qr-backup. Make
+sure to test that you can actually read the QR size you select.
 
 Backup options:
     --dpi DPI
-        Sets the print resolution of your printer. Default: 600
+        Sets the print resolution of your printer.
+        Default: 600
     --compress, --no-compress
-        This gives a more compact backup, but partial recovery is impossible. Default: compressed
+        This gives a more compact backup, but partial recovery is impossible.
+        Default: compressed
     --error-correction CORRECTION
-        Sets the error correction level. Options are L, M, Q, and H. Default: M (25%)
+        Sets the error correction level. Options are L, M, Q, and H.
+        Default: M (25%)
     --filename FILENAME
-        Set the restored filename. Max 32 chars. Default: same as <FILE>
+        Set the restored filename. Max 32 chars.
+        Default: same as <FILE>
+    --instructions page|cover|both|none
+        Sets how frequently the instructions are printed. If 'cover' or 'both'
+        is selected, more verbose instructions will be printed on the cover
+        page. 
+        Default: page
     --output FILENAME, -o FILENAME
-        Set the output pdf path (redirecting stdout also works). Default: <FILE>.qr.pdf
+        Set the output pdf path (redirecting stdout also works).
+        Default: <FILE>.qr.pdf
     --page WIDTH_POINTS HEIGHT_POINTS
-        Sets the usable size of the paper on your printer. This should NOT be 8.5 x 11 -- make sure to include margins. Default: 500x600
+        Sets the usable size of the paper on your printer. This should NOT be
+        8.5 x 11 -- make sure to include margins.
+        Default: 500px x 600px
     --qr-version VERSION
-        Uses QR codes, version VERSION. Versions range from 1-40. The bigger the version, the harder to scan but the more data per code. Default: 10
+        Uses QR codes, version VERSION. Versions range from 1-40. The bigger
+        the version, the harder to scan but the more data per code.
+        Default: 10
     --scale SCALE
-        Scale QR codes so that each small square in the QR code is SCALE x SCALE pixels. Default: 8
+        Scale QR codes so that each small square in the QR code is 
+        SCALE x SCALE pixels.
+        Default: 8px
 
 Restore options:
     --code-count COUNT, -c COUNT
-        Specify the number of total QR codes. Default: automatic
+        Specify the number of total QR codes.
+        Default: automatic
     --compress, --no-compress
-        Force decompression (on/off). Default: automatic
+        Force decompression (on/off).
+        Default: automatic
     --image-restore
-        Force image-based (scanner) restore. Default: automatic
+        Force image-based (scanner) restore.
+        Default: automatic
     --display, --no-display
-        For webcam scanning, (display/don't display) a webcam preview. Default: display
+        For webcam scanning, (display/don't display) a webcam preview.
+        Default: display
     --output FILENAME, -o
-        Set the restore file path. Default: stdout
+        Set the restore file path.
+        Default: stdout
     --sha256 SHA256
-        Include a sha256sum to check the file. Default: no check, prints checksum
+        Include a sha256sum to check the file.
+        Default: no check, prints checksum to stderr
     --webcam-restore
-        Force webcam-based restore. Default: automatic
+        Force webcam-based restore.
+        Default: automatic
 
 Options for both:
     --verbose, -v
         Print more detailed information during run
+'''
+assert all(len(line)<=80 for line in HELP.split("\n"))
 
-The QR mode is always binary with no QR compression.'''
+COVER = """
+DO NOT THROW OUT
+
+This backup was generated using qr-backup, a program to back up computer files to physical paper. The person who made the backup went through a lot of
+work to make and print this document, and will probably be mad at you if you throw it out. They will also end up with big problems if/when their important
+file goes missing.
+
+To learn more about qr-backup, visit https://github.com/za3k/qr-backup.
+
+== Information about this backup ==
+
+File: {restore_file}
+Backup created on: {backup_date}
+Size (bytes): {original_len}
+SHA256: {sha256sum}
+Command used: {nice_cmd}
+{notes}
+== How to restore ==
+
+You will need access to a Linux computer and a command line. You will also need to install 'zbar' and imagemagick.
+
+To restore using a webcam and the Linux command line:
+  Step 1 (scan): zbarcam --raw | tee /tmp/qrs | cut -c1-{code_end}
+    Scan each code at least once in any order'
+  Step 2 (restore): {howto_restore_cmd} >{restore_file}'
+  Step 3 (verify): sha256sum {restore_file} # Check against SHA256 above
+
+To restore using a webcam and qr-backup:
+  Step 1: qr-backup --restore
+
+To restore using a scanner and the Linux command line:
+  Step 1 (scan): Scan the images with your scanner. Save them as any image format, it doesn't matter.
+  Step 2 (scan): zbarimg -q --raw *.png >/tmp/qrs
+  Step 3 (restore): {howto_restore_cmd} >{restore_file}
+  Step 4 (verify): sha256sum {restore_file} # Check against SHA256 above
+
+To restore using a scanner and qr-backup:
+  qr-backup --restore IMAGE1 IMAGE2 ...
+
+== Dear future archivists ==
+
+(You can probably ignore this section)
+
+If you don't have access to the Linux command line, and you don't have access to qr-backup, here is an explanation of how the backup is structured.
+You will need a computing device and a great deal of technical expertise to restore this way.
+
+- First, each QR code is scanned. QR is a 2D "bar"code in common use.
+  QR is too complex to explain here. It is designed by Denso Wave. Each QR code holds 7 to 2953 bytes as binary data (depends on the settings)
+  The error correction level (L/M/Q/H) and version (size, 1-40) are given in "command" under the backup information above.
+  Many common devices can scan QR codes, such as 2012-2020 "smart" cell phones.
+- Each QR code is labeled--the label matches the data written under the QR code.
+  This data only used to label which code is which. It is removed.
+- The non-label contents of each QR-code are base64.
+  Base64 holds 6 bits per character. The full character set is:
+    ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
+    = is used as padding so the final size is a multiple of 24 bits
+  base64 is detailed in RFC 4648 (base16, base32, and base64). The string "ZXhhbXBsZQ==" is decoded as "example".
+  The command-line tool base64 or many commonly-available internet tools provide this function.
+  It is reasonable to program a tool to decode base64 yourself. Convert from base-64 given above to base-256 (bytes).
+- The decoded base64 from every QR code is appended together in order.
+- If the --no-compress is not part of the command, the file is now assembled.
+- If the --compress option is assembled, the file is gzip-compressed.
+  The details of gzip are too long to include here, see RFC 1951 (DEFLATE).
+  Naming a file "XXX.gz" allows it to be decompressed on Windows, Mac/Apple, BSD, Linux, and Unix. 
+- The file is checksummed using sha256, which verifies the file is perfectly restored.
+  The checksum is detailed in United States NIST standard FIPS PUB 180-2 (SHA2)
+  Many standard tools like sha256 perform this checksum.
+"""
 
 L = qrcode.constants.ERROR_CORRECT_L
 M = qrcode.constants.ERROR_CORRECT_M # default, 25%
@@ -221,27 +316,31 @@ def add_label(image, text, side="bottom", max_fontsize=24, max_width=None, label
         assert False, "Unknown side for label: {}".format(side)
     return labeled
 
-def generate_label(text, max_width, max_fontsize=24):
+def generate_label(text, max_width, max_fontsize=24, min_fontsize=4):
     # to do, maybe some fancy word wrap
     test_im = PIL.Image.new(mode="1", size=(1,1), color=1)
     test_draw = PIL.ImageDraw.Draw(test_im)
 
-    for fontsize in range(max_fontsize, 3, -1):
+    for fontsize in range(max_fontsize, min_fontsize-1, -1):
         font = PIL.ImageFont.truetype("DejaVuSans.ttf", fontsize)
         width, height = test_draw.multiline_textsize(text, font=font)
         height += 4
         if width <= max_width:
-            #logging.info("Printing label at font size " + str(fontsize))
             im = PIL.Image.new(mode="1", size=(width, height), color=1) # black-and-white
             draw = PIL.ImageDraw.Draw(im)
             draw.multiline_text((0,-2), text, font=font) # Eurgh, hardcoding an offset.
             return im
+        else:
+            logging.info("Reducing label size to {}".format(fontsize))
     #assert False
     logging.error("Label cannot fit in the requested width. Forcing output...")
-    font = PIL.ImageFont.truetype("DejaVuSans.ttf", 12)
-    im = PIL.Image.new(mode="1", size=bbox, color=1) # black-and-white
+
+    font = PIL.ImageFont.truetype("DejaVuSans.ttf", min_fontsize)
+    width, height = test_draw.multiline_textsize(text, font=font)
+    height += 4
+    im = PIL.Image.new(mode="1", size=(max_width, height), color=1) # black-and-white
     draw = PIL.ImageDraw.Draw(im)
-    draw.multiline_text((0,0), text)
+    draw.multiline_text((0,-2), text, font=font) # Eurgh, hardcoding an offset.
     return im
 
 def h_merge(images):
@@ -277,6 +376,8 @@ def main_backup(args):
     use_compression = True
     output_path = None
     GENERATE_DOCS = False # Manually generate example.png for the README when qr-backup changes
+    add_page_instructions = True
+    add_cover_instructions = False
 
     # parse arguments
     pargs = []
@@ -301,6 +402,24 @@ def main_backup(args):
             assert len(restore_file) > 0 and not restore_file.startswith("-")
         elif arg == "--generate-docs": # Development only. Don't document or use please.
             GENERATE_DOCS=True
+        elif arg == "--instructions":
+            if len(args) < 1:
+                show_help("--instructions requires one argument")
+            instruction_type, args = args[0], args[1:]
+            if instruction_type == "page":
+                add_page_instructions = True
+                add_cover_instructions = False
+            elif instruction_type == "cover":
+                add_page_instructions = False
+                add_cover_instructions = True
+            elif instruction_type == "none":
+                add_page_instructions = False
+                add_cover_instructions = False
+            elif instruction_type == "both":
+                add_page_instructions = True
+                add_cover_instructions = True
+            else:
+                show_help("--instructions requires one of: page cover both none")
         elif arg == "--no-compress":
             use_compression = False
         elif arg == "--page":
@@ -402,6 +521,18 @@ def main_backup(args):
     HOWTO += f'\n  Step 3 (verify): sha256sum {restore_file} # {sha256sum}, {original_len} bytes'
     HOWTO += f'\nThis backup was generated on {backup_date} with: {nice_cmd}'
 
+    cover_txt = COVER.format(
+        backup_date=backup_date,
+        restore_file=restore_file,
+        original_len=original_len,
+        sha256sum=sha256sum,
+        nice_cmd=nice_cmd,
+        notes="", # Allow arbitrary notes
+        code_end=code_digits+1,
+        howto_restore_cmd=howto_restore_cmd,
+    )
+    #cover_txt = '\n'.join(textwrap.wrap(cover_txt), width=160, replace_whitespace=False))
+
     # Calculate QR padding produced by qrcode module
     example_qr = qrs[0].make_image().copy()
     qr_bbox = PIL.ImageOps.invert(example_qr.copy().convert("L")).getbbox()
@@ -423,19 +554,22 @@ def main_backup(args):
     page_w_pixel, page_h_pixel = math.floor(page_w_points/72.0*dpi), math.floor(page_h_points/72.0*dpi) # 1 "dot" = 1 pixel. !!important note, DPI is not used yet, which is probably some config bug in Pillow
     logging.info(f"Page is: {page_w_pixel}x{page_h_pixel}px")
 
-    howto_label = generate_label(HOWTO, page_w_pixel - qr_hpad)
-    howto_height = howto_label.size[1]
+    if add_page_instructions:
+        howto_label = generate_label(HOWTO, page_w_pixel - qr_hpad)
+        howto_height = howto_label.size[1]
+    else:
+        howto_height = 0
     
     page_w_qr, page_h_qr = math.floor((page_w_pixel-2) // qr_w_pixel), math.floor((page_h_pixel-2-howto_height) // qr_h_pixel)
     qr_per_page = page_w_qr * page_h_qr
     if qr_per_page == 0:
         logging.error("Not even 1 QR fits on the given page. Forcing output anyway...")
         page_w_qr, page_h_qr, qr_per_page = 1,1,1
-    num_pages = math.ceil(len(qrs)/qr_per_page)
-    logging.info(f"{page_w_qr} x {page_h_qr} qr codes (at version {qr_version}) per page. {num_pages} pages total")
+    num_qr_pages = math.ceil(len(qrs)/qr_per_page)
+    logging.info(f"{page_w_qr} x {page_h_qr} qr codes (at version {qr_version}) per page. {num_qr_pages} pages total")
 
-    density = original_len / num_pages
-    logging.info(f"{len(content)} bytes in {num_pages} ({density/1000:.2f}KB/page)")
+    density = original_len / num_qr_pages
+    logging.info(f"{len(content)} bytes in {num_qr_pages} ({density/1000:.2f}KB/page)")
 
     # Combine rows
     rows = []
@@ -444,18 +578,30 @@ def main_backup(args):
         rows.append(h_merge(row_qrs))
 
     # Use imagemagick to make one png file per page-side
-    unnumbered_pages = []
-    for page_num, page_start in enumerate(range(0, len(rows), page_h_qr)):
+    unnumbered_images = []
+    if add_cover_instructions:
+        cover_img = generate_label(cover_txt, page_w_pixel - qr_hpad, max_fontsize=24, min_fontsize=24)
+        assert cover_img.size[0] <= page_w_pixel - 2
+        unnumbered_images.append(cover_img)
+    for page_start in range(0, len(rows), page_h_qr):
         page_rows = rows[page_start:page_start+page_h_qr]
         page_qrs = v_merge(page_rows)
-        page_complete = add_label(page_qrs, HOWTO, side="top", max_fontsize=24, max_width=page_w_pixel-2)
+        if add_page_instructions:
+            page_complete = add_label(page_qrs, HOWTO, side="top", max_fontsize=24, max_width=page_w_pixel-2)
+            unnumbered_images.append(page_complete)
+        else:
+            unnumbered_images.append(page_qrs)
 
+    # Add a rectangle border and pad any small ones to full-page size
+    unnumbered_pages = []
+    for img in unnumbered_images:
+        #assert img.size[0] <= page_w_pixel-2 and img.size[1] <= page_h_pixel-2
         if GENERATE_DOCS:
-            page_h_pixel = page_complete.size[1]+2
+            page_h_pixel = img.size[1]+2 # minimize size for example.png
         page = PIL.Image.new(mode="1", size=(page_w_pixel, page_h_pixel), color=1)
         page_draw = PIL.ImageDraw.Draw(page)
         page_draw.rectangle(((0,0), (page_w_pixel-1, page_h_pixel-1)), outline=0, fill=1, width=1) # Rectangle for debugging print cutoff, and to look nice.
-        page.paste(page_complete, (1,1)) # Main contents
+        page.paste(img, (1,1)) # Main contents
         unnumbered_pages.append(page)
 
     # Add page numbers after. Currently page-numbering is perfectly reliable, but we're about to add more complicated layout options.
