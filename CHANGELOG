@@ -26,7 +26,8 @@ v1.1 (not released)
 - Bugfix (#6): Reading from stdin did not work correctly. Now it should.
 - Bugfix (#7): The instructions are always full-page-width now.
 - Bugfix (#15): Generated PDF is always identical (except the included date)
-- Bugfix (#17): Improved the CLI restore to work with multiple consecutive restores
+- Bugfix (#17): Improved the CLI restore to work with multiple consecutive
+  restores
 - Bugfix (#18): Support digital restore check when qr-backup is used in a
   pipeline, by keeping input and output in memory.
 - Code cleanup: QR code content chunking vs actual QR graphic generation is
