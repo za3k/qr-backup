@@ -3,6 +3,7 @@ v1.1 (not released)
 - Added `-o`, `--output` option to give the name of an output file.
 - Added `--instructions` option to pick how to print instructions. Options are as a cover sheet, on each page (the default), both, or neither.
 - Added `--note` to add some user-chosen text to each page or the cover sheet.
+- Added encryption. `--encrypt PASS` uses a passphrase you supply. `--encrypt generate` generates a random passphrase for you (printed on a separate page by default). `--encrypt-print-passphrase` and `--no-encrypt-print-passphrase` turn the separate page on and off. `--encrypt PASS` is also an option for restore.
 - Base64 encoding is now done within a QR code, not across QR codes. This is to support future erasure coding.
 - Added a technical-english explanation of the restore process to the instructions. It's long so it's only on the cover sheet.
 - Added the size (in bytes) of the file to the human-readable output.
