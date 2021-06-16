@@ -25,7 +25,8 @@ v1.1 (not released)
   restore.
 - Bugfix (#6): Reading from stdin did not work correctly. Now it should.
 - Bugfix (#7): The instructions are always full-page-width now.
-- Bugfix (#15): Generated PDF is always identical (except the included date)
+- Bugfix (#15): Generated PDF is always identical (except the included date).
+  However --encrypt is inherently non-deterministic for good reasons.
 - Bugfix (#17): Improved the CLI restore to work with multiple consecutive
   restores
 - Bugfix (#18): Support digital restore check when qr-backup is used in a
