@@ -8,9 +8,10 @@ v1.1 (not released)
     separate page on and off.
   - `--encrypt PASS` is also an option for restore.
 - Automatic digital restore check added, which runs when you make a paper
-  backup. It uses zbarimg to test restore from the digital .pdf. Currently the
-  check sometimes fails because zbar is unreliable, so it only prints a
-  warning.
+  backup. Two tests are done testing restore from the digital .pdf. First, the
+  linux command-line check is performed. Second qr-backup in --restore mode is
+  used. Currently the check sometimes fails because zbar is unreliable, so
+  failure only prints a warning.
 - Added `-o`, `--output` option to give the name of an output file.
 - Added `--instructions` option to pick how to print instructions. Options are
   as a cover sheet, on each page (the default), both, or neither.
