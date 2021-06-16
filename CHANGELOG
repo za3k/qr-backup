@@ -2,32 +2,46 @@ v1.1 (not released)
 - Added the `--restore` option so qr-backup will do the restore for you.
 - Added encryption. New command-line options:
   - `--encrypt PASS` uses a passphrase you supply.
-  - `--encrypt generate` generates a random passphrase for you (printed on a separate page by default).
-  - `--encrypt-print-passphrase` and `--no-encrypt-print-passphrase` turn the separate page on and off.
+  - `--encrypt generate` generates a random passphrase for you (printed on a
+    separate page by default).
+  - `--encrypt-print-passphrase` and `--no-encrypt-print-passphrase` turn the
+    separate page on and off.
   - `--encrypt PASS` is also an option for restore.
-- Automatic digital restore check added, which runs when you make a paper backup. It uses zbarimg to test restore from the digital .pdf. Currently the check sometimes fails because zbar is unreliable, so it only prints a warning.
+- Automatic digital restore check added, which runs when you make a paper
+  backup. It uses zbarimg to test restore from the digital .pdf. Currently the
+  check sometimes fails because zbar is unreliable, so it only prints a
+  warning.
 - Added `-o`, `--output` option to give the name of an output file.
-- Added `--instructions` option to pick how to print instructions. Options are as a cover sheet, on each page (the default), both, or neither.
-- Added a english explanation of the restore process to the instructions (it could be clearer). It's long so it's only on the cover sheet.
+- Added `--instructions` option to pick how to print instructions. Options are
+  as a cover sheet, on each page (the default), both, or neither.
+- Added a english explanation of the restore process to the instructions. It's
+  long so it's only on the cover sheet.
 - Added the size (in bytes) of the file to the human-readable output.
 - Added `--note` to add some user-chosen text to each page or the cover sheet.
-- Format: Base64 encoding is now done within a QR code, not across QR codes. This is to support future erasure coding.
-- Format: Codes are now labeled as "N01/50" rather than "01". This is to support multiple code types with CLI restore, and to show a progress bar during restore.
+- Format: Base64 encoding is now done within a QR code, not across QR codes.
+  This is to support future erasure coding.
+- Format: Codes are now labeled as "N01/50" rather than "01". This is to
+  support multiple code types down the line, and to allow a progress bar during
+  restore.
 - Bugfix (#6): Reading from stdin did not work correctly. Now it should.
 - Bugfix (#7): The instructions are always full-page-width now.
 - Bugfix (#15): Generated PDF is always identical (except the included date)
 - Bugfix (#17): Improved the CLI restore to work with multiple consecutive restores
-- Bugfix (#18): Support digital restore check when qr-backup is used in a pipeline, by keeping input and output in memory.
-- Code cleanup: QR code content generation, and actual QR code generation is separated
+- Bugfix (#18): Support digital restore check when qr-backup is used in a
+  pipeline, by keeping input and output in memory.
+- Code cleanup: QR code content chunking vs actual QR graphic generation is
+  split into two functions
 
 v1.0
 - Generate a PDF from any file
 - Built-in compression (on by default)
-- Uses base64 encoding, nothing, or '\n' to '\b' replacement as needed to avoid newlines in restore output.
+- Uses base64 encoding, nothing, or '\n' to '\b' replacement as needed to avoid
+  newlines in restore output.
 - Long files are output as multiple QR codes.
 
 - Default page size is 500px x 600px
-- Default settings are 8px scale, version 10 QR codes, using binary encoding and L error correction. Output is 3K/side on default settings.
+- Default settings are 8px scale, version 10 QR codes, using binary encoding
+  and M error correction. Output is 3K/side on default settings.
 - Font is DevaVuSans (included)
 
 - Restore is Linux CLI only, using zbar and coreutils.
