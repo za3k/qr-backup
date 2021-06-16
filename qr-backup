@@ -159,10 +159,12 @@ You will need a computing device and a great deal of technical expertise to rest
   The command-line tool base64 or many commonly-available internet tools provide this function.
   It is reasonable to program a tool to decode base64 yourself. Convert from base-64 given above to base-256 (bytes).
 - The decoded base64 from every QR code is appended together in order.
-- If the --no-compress is not part of the command, the file is now assembled.
-- If the --compress option is assembled, the file is gzip-compressed.
+- If the --encrypt option is given, the file must be decrypted.
+  The details of GPG decryption are too long to include here, but the algorithm used was AES256.
+- If the --compress option is given, the file must be gzip-decompressed.
   The details of gzip are too long to include here, see RFC 1951 (DEFLATE).
   Naming a file "XXX.gz" allows it to be decompressed on Windows, Mac/Apple, BSD, Linux, and Unix. 
+- The file is now assembled.
 - The file is checksummed using sha256, which verifies the file is perfectly restored.
   The checksum is detailed in United States NIST standard FIPS PUB 180-2 (SHA2)
   Many standard tools like sha256 perform this checksum.
@@ -291,8 +293,9 @@ def generate_passphrase():
     return ' '.join(random.choices(english_wordlist.words, k=8))
 
 # I took a look at the 'gnupg' library... it doesn't support bytes, and it isn't really designed to do symmetric encryption/decryption either.
-def encrypt(content_bytes, passphrase, armor=True):
-    result = subprocess.run(["gpg", "--symmetric", "--no-symkey-cache", "--passphrase", passphrase, "--batch"] + (["--armor"] if armor else []), capture_output=True, input=content_bytes)
+def encrypt(content_bytes, passphrase, armor=False, cipher="AES256"):
+    # I chose to hardcode an encryption cipher, to make documenting the restore easier. This does make it harder to futureproof, and some people may distrust AES already.
+    result = subprocess.run(["gpg", "--symmetric", "--no-symkey-cache", "--passphrase", passphrase, "--batch", "--cipher-algo"] + (["--armor"] if armor else []), capture_output=True, input=content_bytes)
     assert result.returncode == 0
     return result.stdout
 
@@ -429,6 +432,7 @@ def main_backup(args):
                 show_help("--dpi requires one argument (an integer dots-per-inch)")
             dpi, args = int(args[0]), args[1:]
         elif arg == "--encrypt":
+            # Note: --encrypt inherently makes the output nondeterministic. AES256 uses both a random IV and a salt.
             if len(args) < 1 or args[0].startswith("-"):
                 show_help("--encrypt requires either 'generate' or a passphrase")
             use_encryption = True

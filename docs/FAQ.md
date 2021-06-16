@@ -73,8 +73,11 @@ Because I want the restore process to work when qr-backup has been lost to histo
 ## How exactly does the backup/restore process work?
 The exact commands to run are described in the README and on the printed backup. But here's a conceptual explanation of how things work.
 
+If find this explanation helpful, run qr-backup with the `--instructions both` option to add it to the paper backup.
+
 The backup process:
 - If compression is on, data is compressed using gzip
+- If encryption is on, data is password-protected with GPG in symmetric mode.
 - The data is now preprocessed.
 - The data is split into small chunks, about 2K each with the default settings.
 - Each chunk is base64 encoded.
@@ -87,6 +90,7 @@ The restore process is
 - The "N01/50" thru "N50/50" labels are removed. Any chunk with an unexpected label is thrown out (for forwards compatibility).
 - Each chunk is base64-decoded
 - The chunks are appended together. This has restored the preprocessed data.
+- If the data was encrypted, it is decrypted with GPG in symmetric mode.
 - If the data was compressed, it's decompressed. The file is now restored.
 - The file is checksummed using sha256, which verifies the file is perfectly restored.
 
