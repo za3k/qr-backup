@@ -1,8 +1,11 @@
 v1.1 (not released)
 - Automatic digital restore check added, which uses zbarimg to test restore from the digital .pdf.
 - Added `-o`, `--output` option to give the name of an output file.
-- Added the original files of the file to the human-readable output.
+- Added `--instructions` option to pick how to print instructions. Options are as a cover sheet, on each page (the default), both, or neither.
+- Added `--note` to add some user-chosen text to each page or the cover sheet.
 - Base64 encoding is now done within a QR code, not across QR codes. This is to support future erasure coding.
+- Added a technical-english explanation of the restore process to the instructions. It's long so it's only on the cover sheet.
+- Added the size (in bytes) of the file to the human-readable output.
 - Bugfix (#6): Reading from stdin did not work correctly. Now it should.
 - Bugfix (#7): The instructions are always full-page-width now.
 - Bugfix (#15): Generated PDF is always identical (except the included date)
