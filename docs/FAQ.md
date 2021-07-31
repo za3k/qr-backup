@@ -125,8 +125,6 @@ Then (in order):
 - Protect against fire damage. The best way to protect against fire damage to paper is to have a copy in another building.
 
 ## What are the design goals of qr-backup?
-Okay, you caught me, no one has asked this, it's not really an FAQ.
-
 - It should be very easy to restore the backup
 - It should actually work on my actual computer, on default settings
 - It should actually work with low-quality hardware (ex bad black-and-white printer and bad webcam)
@@ -188,6 +186,8 @@ Here's how they are similar/different
 - [qrencode](https://fukuchi.org/works/qrencode/), etc: Small amount of data can be directly printed to one QR code, and restored by any QR scanner.
 - [paperbackup](https://github.com/intra2net/paperbackup): Remarkably similar to qr-backup, down to the code format. Based on QR codes. Focused on GPG/SSH key backup. See also the [paperkey](http://www.jabberwocky.com/software/paperkey/) preprocessor.
 - [asc2qr.sh](https://github.com/4bitfocus/asc-key-to-qr-code): QR-based, less polished.
+- [qrpdf](https://github.com/EmperorArthur/qrpdf): QR-based, similar to qr-backup. May support parity encoding.
+- [qrdump](https://github.com/jerabaul29/qrdump): **Incomplete** QR-based, similar to qr-backup.
 
 Dense pixel grid (like Paperbak). Everything in this section needs a good scanner:
 - Paperback [explanation](https://ollydbg.de/Paperbak/) and [code](https://github.com/Rupan/paperbak/) by OlyDbg: Much denser, windows-only. Uses reed-solomon codes.
