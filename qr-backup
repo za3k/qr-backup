@@ -404,7 +404,7 @@ def v_merge(images):
 
 def main_backup(args):
     # default settings
-    qr_version = 10
+    qr_version = 40
     error_correction = M # default, 25%
     scale = 8
     dpi = 300
