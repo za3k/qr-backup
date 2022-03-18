@@ -33,6 +33,10 @@ Backup options:
     --filename FILENAME
         Set the restored filename. Max 32 chars.
         Default: same as <FILE>
+    --human-readable-stdout
+        Prints the raw QR code data to stdout.
+        Also includes current date, input_filename, and sha256 hash
+        Default: disabled
     --instructions page|cover|both|none
         Sets how frequently the instructions are printed. If 'cover' or 'both'
         is selected, more verbose instructions will be printed on the cover
