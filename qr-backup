@@ -44,6 +44,10 @@ Backup options:
     --filename FILENAME
         Set the restored filename. Max 32 chars.
         Default: same as <FILE>
+    --human-readable-stdout
+        Prints the raw QR code data to stdout.
+        Also includes current date, input_filename, and sha256 hash
+        Default: disabled
     --instructions page|cover|both|none
         Sets how frequently the instructions are printed. If 'cover' or 'both'
         is selected, more verbose instructions will be printed on the cover
@@ -272,6 +276,18 @@ def generate_chunks(data, chunk_size_base64):
     assert len(chunks) == num_qrs
     return chunk_digits, chunks
 
+def generate_human_readable_page_template_stdout(qrs, input_filename, sha256sum):
+    # get qr code data
+    qr_data = [qr.data_list[0].data.decode('utf-8') for qr in qrs]
+
+    # create header
+    backup_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    human_readable_page_template = f"Generated on: {backup_date}\n" +\
+                                   f"Input filename: {input_filename}\n" +\
+                                   f"sha256: {sha256sum}\n\n"
+
+    return human_readable_page_template + '\n\n'.join(qr_data)
+
 def qr_codes(data, error_correction, version, scale):
     naive_chunk_size = qr_size_chars(version, MODE, error_correction)
     chunk_digits, chunks = generate_chunks(data, naive_chunk_size)
@@ -419,6 +435,7 @@ def main_backup(args):
     use_encryption = False
     encryption_passphrase = None
     print_passphrase = None
+    human_readable_stdout = False
 
     # parse arguments
     pargs = []
@@ -452,6 +469,8 @@ def main_backup(args):
             assert len(restore_file) > 0 and not restore_file.startswith("-")
         elif arg == "--generate-docs": # Development only. Don't document or use please.
             GENERATE_DOCS=True
+        elif arg == "--human-readable-stdout":
+            human_readable_stdout = True
         elif arg == "--instructions":
             if len(args) < 1:
                 show_help("--instructions requires one argument")
@@ -572,6 +591,11 @@ def main_backup(args):
 
     # Generate QR codes
     code_digits, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
+
+    # print human-readable data to stdout and exit
+    if human_readable_stdout:
+        print(generate_human_readable_page_template_stdout(qrs, input_filename, sha256sum))
+        sys.exit(0)
 
     # How to restore
     restore_cmd = f'sort -u | grep "^N" | cut -c{code_digits*2+4}- | base64 -d'
