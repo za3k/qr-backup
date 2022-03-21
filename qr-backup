@@ -175,7 +175,12 @@ L = qrcode.constants.ERROR_CORRECT_L
 M = qrcode.constants.ERROR_CORRECT_M # default, 25%
 Q = qrcode.constants.ERROR_CORRECT_Q
 H = qrcode.constants.ERROR_CORRECT_H
-MODE = qrcode.util.MODE_8BIT_BYTE # not settable. and no, base64 encoded data doesn't bit in alphanumeric (there are only 44 chars)
+QR_MODE = qrcode.util.MODE_8BIT_BYTE # not settable. and no, base64 encoded data doesn't bit in alphanumeric (there are only 44 chars)
+
+# Greyscale is required to work around https://github.com/python-pillow/Pillow/issues/6149
+IMAGE_MODE="L"
+WHITE=255
+BLACK=0
 
 VERSIONS_BITS = {
     # Binary bits for each version size, 1-40
@@ -273,7 +278,7 @@ def generate_chunks(data, chunk_size_base64):
     return chunk_digits, chunks
 
 def qr_codes(data, error_correction, version, scale):
-    naive_chunk_size = qr_size_chars(version, MODE, error_correction)
+    naive_chunk_size = qr_size_chars(version, QR_MODE, error_correction)
     chunk_digits, chunks = generate_chunks(data, naive_chunk_size)
     
     qrs = []
@@ -284,7 +289,7 @@ def qr_codes(data, error_correction, version, scale):
             box_size=scale,
         )
         assert len(chunk) <= naive_chunk_size
-        qr.add_data(qrcode.util.QRData(chunk, mode=MODE), optimize=0)
+        qr.add_data(qrcode.util.QRData(chunk, mode=QR_MODE), optimize=0)
         qr.make(fit=False)
         qrs.append(qr)
 
@@ -342,7 +347,7 @@ def add_label(image, text, side="bottom", max_fontsize=24, max_width=None, label
 
     # Layout
     width, combined_height = max(image.size[0], left+label.size[0]), image.size[1] + label.size[1]
-    labeled = PIL.Image.new(mode="1", size=(width, combined_height), color=1) #B+W
+    labeled = PIL.Image.new(mode=IMAGE_MODE, size=(width, combined_height), color=WHITE) #B+W
     if side == "bottom":
         labeled.paste(image, (0,0))
         labeled.paste(label, (left,image.size[1]))
@@ -355,7 +360,7 @@ def add_label(image, text, side="bottom", max_fontsize=24, max_width=None, label
 
 def generate_label(text, max_width, max_fontsize=24, min_fontsize=4):
     # to do, maybe some fancy word wrap
-    test_im = PIL.Image.new(mode="1", size=(1,1), color=1)
+    test_im = PIL.Image.new(mode=IMAGE_MODE, size=(1,1), color=WHITE)
     test_draw = PIL.ImageDraw.Draw(test_im)
 
     for fontsize in range(max_fontsize, min_fontsize-1, -1):
@@ -363,7 +368,7 @@ def generate_label(text, max_width, max_fontsize=24, min_fontsize=4):
         width, height = test_draw.multiline_textsize(text, font=font)
         height += 4
         if width <= max_width:
-            im = PIL.Image.new(mode="1", size=(width, height), color=1) # black-and-white
+            im = PIL.Image.new(mode=IMAGE_MODE, size=(width, height), color=WHITE) # black-and-white
             draw = PIL.ImageDraw.Draw(im)
             draw.multiline_text((0,-2), text, font=font) # Eurgh, hardcoding an offset.
             return im
@@ -375,7 +380,7 @@ def generate_label(text, max_width, max_fontsize=24, min_fontsize=4):
     font = PIL.ImageFont.truetype("DejaVuSans.ttf", min_fontsize)
     width, height = test_draw.multiline_textsize(text, font=font)
     height += 4
-    im = PIL.Image.new(mode="1", size=(max_width, height), color=1) # black-and-white
+    im = PIL.Image.new(mode=IMAGE_MODE, size=(max_width, height), color=WHITE) # black-and-white
     draw = PIL.ImageDraw.Draw(im)
     draw.multiline_text((0,-2), text, font=font) # Eurgh, hardcoding an offset.
     return im
@@ -384,7 +389,7 @@ def h_merge(images):
     # Alignment is top-aligned
     combined_width = sum(image.size[0] for image in images)
     max_height = max(image.size[1] for image in images)
-    im = PIL.Image.new(mode="1", size=(combined_width, max_height), color=1) #B+W
+    im = PIL.Image.new(mode=IMAGE_MODE, size=(combined_width, max_height), color=WHITE) #B+W
     width = 0
     for source_image in images:
         im.paste(source_image,(width, 0))
@@ -395,7 +400,7 @@ def v_merge(images):
     # Alignment is left-aligned
     max_width = max(image.size[0] for image in images)
     combined_height = sum(image.size[1] for image in images)
-    im = PIL.Image.new(mode="1", size=(max_width, combined_height), color=1) #B+W
+    im = PIL.Image.new(mode=IMAGE_MODE, size=(max_width, combined_height), color=WHITE) #B+W
     height = 0
     for source_image in images:
         im.paste(source_image,(0, height))
@@ -675,9 +680,9 @@ def main_backup(args):
         #assert img.size[0] <= page_w_pixel-2 and img.size[1] <= page_h_pixel-2
         if GENERATE_DOCS:
             page_h_pixel = img.size[1]+2 # minimize size for example.png
-        page = PIL.Image.new(mode="1", size=(page_w_pixel, page_h_pixel), color=1)
+        page = PIL.Image.new(mode=IMAGE_MODE, size=(page_w_pixel, page_h_pixel), color=WHITE)
         page_draw = PIL.ImageDraw.Draw(page)
-        page_draw.rectangle(((0,0), (page_w_pixel-1, page_h_pixel-1)), outline=0, fill=1, width=1) # Rectangle for debugging print cutoff, and to look nice.
+        page_draw.rectangle(((0,0), (page_w_pixel-1, page_h_pixel-1)), outline=BLACK, fill=WHITE, width=1) # Rectangle for debugging print cutoff, and to look nice.
         page.paste(img, (1,1)) # Main contents
         unnumbered_pages.append((should_number, page))
 
