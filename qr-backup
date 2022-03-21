@@ -785,7 +785,7 @@ def webcam_restore(use_display):
             line = proc.stdout.readline()
             if line == b'':
                 return
-            if (yield line):
+            if (yield line.strip()):
                 return
 
 def expected_codes(codes, code_count): # Returns a list of binary strings
