@@ -1001,7 +1001,7 @@ def main_restore(args):
 if __name__ == "__main__":
     # parse command-line arguments
     args = sys.argv[1:]
-    if len(args) > 1 and args[0] in ["-r", "--restore"]:
+    if len(args) >= 1 and args[0] in ["-r", "--restore"]:
         main_restore(args[1:])
     else:
         main_backup(args)
