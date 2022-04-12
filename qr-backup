@@ -400,8 +400,8 @@ def h_merge(images, padding):
 
 def v_merge(images, padding):
     # Alignment is left-aligned
-    max_width = max(image.size[0] for image in images) + padding*(len(images)-1)
-    combined_height = sum(image.size[1] for image in images)
+    max_width = max(image.size[0] for image in images)
+    combined_height = sum(image.size[1] for image in images) + padding*(len(images)-1)
     im = PIL.Image.new(mode=IMAGE_MODE, size=(max_width, combined_height), color=WHITE) #B+W
     height = 0
     for source_image in images:
