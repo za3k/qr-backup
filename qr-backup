@@ -66,7 +66,7 @@ Backup options:
     --scale SCALE
         Scale QR codes so that each small square in the QR code is 
         SCALE x SCALE pixels.
-        Default: 8px
+        Default: 5px
 
 Restore options:
     --code-count COUNT, -c COUNT
@@ -387,7 +387,7 @@ def generate_label(text, max_width, max_fontsize=24, min_fontsize=4):
     draw.multiline_text((0,-2), text, font=font) # Eurgh, hardcoding an offset.
     return im
 
-def h_merge(images, padding):
+def h_merge(images, padding=0):
     # Alignment is top-aligned
     combined_width = sum(image.size[0] for image in images) + padding*(len(images)-1)
     max_height = max(image.size[1] for image in images)
@@ -398,7 +398,7 @@ def h_merge(images, padding):
         width += source_image.size[0] + padding
     return im
 
-def v_merge(images, padding):
+def v_merge(images, padding=0):
     # Alignment is left-aligned
     max_width = max(image.size[0] for image in images)
     combined_height = sum(image.size[1] for image in images) + padding*(len(images)-1)
@@ -413,7 +413,7 @@ def main_backup(args):
     # default settings
     qr_version = 10
     error_correction = M # default, 25%
-    scale = 8
+    scale = 5
     dpi = 300
     page_w_points, page_h_points = 500,600
     restore_file = None
