@@ -287,13 +287,15 @@ def qr_codes(data, error_correction, version, scale):
             version=version,
             error_correction=error_correction,
             box_size=scale,
+            border=0,
         )
         assert len(chunk) <= naive_chunk_size
         qr.add_data(qrcode.util.QRData(chunk, mode=QR_MODE), optimize=0)
         qr.make(fit=False)
         qrs.append(qr)
+    qr_pad = scale*4
 
-    return chunk_digits, qrs
+    return chunk_digits, qr_pad, qrs
 
 def generate_passphrase():
     return ' '.join(random.choices(english_wordlist.words, k=8))
@@ -385,26 +387,26 @@ def generate_label(text, max_width, max_fontsize=24, min_fontsize=4):
     draw.multiline_text((0,-2), text, font=font) # Eurgh, hardcoding an offset.
     return im
 
-def h_merge(images):
+def h_merge(images, padding):
     # Alignment is top-aligned
-    combined_width = sum(image.size[0] for image in images)
+    combined_width = sum(image.size[0] for image in images) + padding*(len(images)-1)
     max_height = max(image.size[1] for image in images)
     im = PIL.Image.new(mode=IMAGE_MODE, size=(combined_width, max_height), color=WHITE) #B+W
     width = 0
     for source_image in images:
         im.paste(source_image,(width, 0))
-        width += source_image.size[0]
+        width += source_image.size[0] + padding
     return im
 
-def v_merge(images):
+def v_merge(images, padding):
     # Alignment is left-aligned
-    max_width = max(image.size[0] for image in images)
+    max_width = max(image.size[0] for image in images) + padding*(len(images)-1)
     combined_height = sum(image.size[1] for image in images)
     im = PIL.Image.new(mode=IMAGE_MODE, size=(max_width, combined_height), color=WHITE) #B+W
     height = 0
     for source_image in images:
         im.paste(source_image,(0, height))
-        height += source_image.size[1]
+        height += source_image.size[1] + padding
     return im
 
 def main_backup(args):
@@ -576,7 +578,7 @@ def main_backup(args):
         content = encrypt(content, encryption_passphrase)
 
     # Generate QR codes
-    code_digits, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
+    code_digits, qr_padding, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale)
 
     # How to restore
     restore_cmd = f'sort -u | grep "^N" | cut -c{code_digits*2+4}- | base64 -d'
@@ -614,9 +616,7 @@ def main_backup(args):
 
     # Calculate QR padding produced by qrcode module
     example_qr = qrs[0].make_image().copy()
-    qr_bbox = PIL.ImageOps.invert(example_qr.copy().convert("L")).getbbox()
-    qr_lpad, qr_tpad, qr_rpad, qr_bpad = qr_bbox[0], qr_bbox[1], example_qr.size[0]-qr_bbox[2], example_qr.size[1]-qr_bbox[3]
-    qr_hpad, qr_vpad = qr_lpad + qr_rpad, qr_tpad + qr_bpad
+    qr_raw_w_pixel, qr_raw_h_pixel = example_qr.size
 
     # Output QR codes with labels to Pillow Image objects
     labeled = []
@@ -634,12 +634,18 @@ def main_backup(args):
     logging.info(f"Page is: {page_w_pixel}x{page_h_pixel}px")
 
     if add_page_instructions:
-        howto_label = generate_label(HOWTO, page_w_pixel - qr_hpad)
+        howto_label = generate_label(HOWTO, page_w_pixel)
         howto_height = howto_label.size[1]
     else:
         howto_height = 0
     
-    page_w_qr, page_h_qr = math.floor((page_w_pixel-2) // qr_w_pixel), math.floor((page_h_pixel-2-howto_height) // qr_h_pixel)
+    def max_units_with_padding(total_size, unit_size, padding_size):
+        """Calculate the (whole) number of units of width UNIT_SIZE with required padding PADDING_SIZE fit in a layout of width TOTAL_SIZE"""
+        # (qr_width*qrs) + (qr_padding*(qrs-1)) <= page_width
+        # (qr_width+qr_padding)qrs - qr_padding <= page_width
+        # qrs <= (page_width+qr_padding)/(qr_width+qr_padding)
+        return int((total_size+padding_size)/(unit_size+padding_size))
+    page_w_qr, page_h_qr = max_units_with_padding(page_w_pixel-2, qr_w_pixel, qr_padding), max_units_with_padding(page_h_pixel-2-howto_height, qr_h_pixel, qr_padding)
     qr_per_page = page_w_qr * page_h_qr
     if qr_per_page == 0:
         logging.error("Not even 1 QR fits on the given page. Forcing output anyway...")
@@ -647,14 +653,21 @@ def main_backup(args):
     num_qr_pages = math.ceil(len(qrs)/qr_per_page)
     logging.info(f"{page_w_qr} x {page_h_qr} qr codes (at version {qr_version}) per page. {num_qr_pages} pages total")
 
-    density = original_len / num_qr_pages
-    logging.info(f"{len(content)} bytes in {num_qr_pages} ({density/1000:.2f}KB/page)")
+    uncompressed_density = len(content) / num_qr_pages
+    compressed_density = original_len / num_qr_pages
+    logging.info(f"{len(content)} compressed bytes in {num_qr_pages} page(s). {compressed_density/1000:.2f}KB/page including compression, {uncompressed_density/1000:.2f}KB/page without compression")
+    theory_density_per_qr = original_len / len(qrs)
+    theory_density = theory_density_per_qr * qr_per_page
+    logging.info(f"{theory_density/1000:.2f}KB/page theory without compression)")
 
-    # Combine rows
+    qr_min_padded_height = max(qr_h_pixel, qr_raw_h_pixel+qr_padding)
+    qr_v_padding = qr_min_padded_height - qr_h_pixel
+
+    # Combine rows, adding horizontal padding
     rows = []
     for row_start in range(0, len(qrs), page_w_qr):
         row_qrs = labeled[row_start:row_start+page_w_qr]
-        rows.append(h_merge(row_qrs))
+        rows.append(h_merge(row_qrs, padding=qr_padding))
 
     # Use imagemagick to make one png file per page-side
     unnumbered_images = []
@@ -662,12 +675,12 @@ def main_backup(args):
         passphrase_image = generate_label("File: {}\nDate: {}\nYour secret passphrase is: {}\n\nMake sure to hide this sheet somewhere secure, not with your backup!".format(restore_file, backup_date, encryption_passphrase), max_width=page_w_pixel-2)
         unnumbered_images.append((False, passphrase_image))
     if add_cover_instructions:
-        cover_img = generate_label(cover_txt, page_w_pixel - qr_hpad, max_fontsize=24, min_fontsize=24)
+        cover_img = generate_label(cover_txt, page_w_pixel, max_fontsize=24, min_fontsize=24)
         assert cover_img.size[0] <= page_w_pixel - 2
         unnumbered_images.append((True, cover_img))
     for page_start in range(0, len(rows), page_h_qr):
         page_rows = rows[page_start:page_start+page_h_qr]
-        page_qrs = v_merge(page_rows)
+        page_qrs = v_merge(page_rows, padding=qr_v_padding)
         if add_page_instructions:
             page_complete = add_label(page_qrs, HOWTO, side="top", max_fontsize=24, max_width=page_w_pixel-2)
             unnumbered_images.append((True, page_complete))
@@ -692,7 +705,7 @@ def main_backup(args):
     for page_num, (should_number, page) in enumerate(unnumbered_pages):
         if should_number:
             page_num = generate_label("page {}/{}".format(page_num+1, num_pages), max_width=example_qr.size[0]/2)
-            page.paste(page_num, (page.size[0]-page_num.size[0]-1-qr_rpad, page.size[1]-page_num.size[1]-11)) # Page num in bottom-right
+            page.paste(page_num, (page.size[0]-page_num.size[0]-1, page.size[1]-page_num.size[1]-11)) # Page num in bottom-right
         pages.append(page)
 
     # PIL's pdf writer needs to mmap, so it can't accept sys.stdout directly
