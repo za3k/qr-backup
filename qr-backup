@@ -367,7 +367,7 @@ def generate_label(text, max_width, max_fontsize=24, min_fontsize=4):
 
     for fontsize in range(max_fontsize, min_fontsize-1, -1):
         font = PIL.ImageFont.truetype("DejaVuSans.ttf", fontsize)
-        width, height = test_draw.multiline_textsize(text, font=font)
+        _, _, width, height = test_draw.multiline_textbbox((0, 0), text, font=font)
         height += 4
         if width <= max_width:
             im = PIL.Image.new(mode=IMAGE_MODE, size=(width, height), color=WHITE) # black-and-white
