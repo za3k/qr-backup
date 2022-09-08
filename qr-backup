@@ -9,7 +9,7 @@ Requirements to restore from the PDF: zbar (only)
 """
 import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageOps
 import english_wordlist
-import base64, datetime, gzip, hashlib, io, logging, math, os, random, subprocess, sys, textwrap, qrcode
+import base64, datetime, gzip, hashlib, io, logging, math, os, random, subprocess, sys, tempfile, textwrap, qrcode
 assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removing f-strings to fix it, sucka!"
 
 HELP='''Usage: qr-codes.py [OPTIONS] FILE
@@ -727,11 +727,15 @@ def main_backup(args):
     else:
         test_restore_cmd = restore_cmd
     
-    if program_present("zbarimg"):
+    if not program_present("zbarimg"):
+        logging.warning("Skipping digital restore verification, because zbarimg is not available.")
+    elif not program_present("convert"):
+        logging.warning("Skipping digital restore verification, because 'convert' is not available to work around a bug in zbarimg.")
+    else:
         if use_stdout or use_stdin:
             logging.info("Performing linux CLI restore check...")
-            # convert -density 300 is to work around errors in zbarcam
-            linux_test_command = "zbarimg --raw -q -Sdisable -Sqrcode.enable - | {}".format(test_restore_cmd)
+            # convert -density 300 is to work around errors in zbarcam. I offered an upstream patch as https://github.com/mchehab/zbar/pull/227
+            linux_test_command = "convert -density 300 pdf:- png:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | {}".format(test_restore_cmd)
             linux_test = subprocess.run(linux_test_command, shell=True, capture_output=True, input=tmp_pdf.getbuffer())
             linux_success = linux_test.returncode==0 and linux_test.stdout == original_content
 
@@ -743,7 +747,7 @@ def main_backup(args):
             self_test_success = self_test.returncode==0
         else:
             logging.info("Performing linux CLI restore check...")
-            linux_test_command = "zbarimg --raw -q -Sdisable -Sqrcode.enable {} | {} | cmp {}".format(output_path, test_restore_cmd, input_path)
+            linux_test_command = "convert -density 300 {} png:- | zbarimg --raw -q -Sdisable -Sqrcode.enable | {} | cmp {}".format(output_path, test_restore_cmd, input_path)
             linux_success = (subprocess.call(linux_test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
             logging.info("Performing qr-backup restore check...")
             self_test_command = ["python3", sys.argv[0], "--restore", "--sha256", sha256sum, output_path]
@@ -759,8 +763,6 @@ def main_backup(args):
             #sys.exit(1)
         else:
             logging.info("Automatic digital restore verification succeeded.")
-    else:
-        logging.warning("Skipping digital restore verification, because zbarimg is not available.")
 
     if GENERATE_DOCS:
         pages[0].save("docs/example.png")
@@ -777,6 +779,24 @@ def image_restore(image_paths):
     if not program_present("zbarimg"):
         logging.fatal("zbarimg not found. install 'zbar' to scan files.")
         sys.exit(2)
+
+    # Special workaround hack while zbarimg doesn't deal with pdfs
+    if any(path.endswith(".pdf") for path in image_paths):
+        temporary = []
+        new_image_paths = []
+        for image in image_paths:
+            if image.endswith(".pdf"):
+                handle, temp_png = tempfile.mkstemp(suffix=".png")
+                temporary.append((handle, temp_png))
+                subprocess.run(["convert", "-density", "300", image, temp_png], stderr=subprocess.DEVNULL)
+                new_image_paths.append(temp_png)
+            else:
+                new_image_paths.append(image)
+        for line in image_restore(new_image_paths):
+            yield line
+        for handle, temp_png in temporary:
+            os.close(handle)
+            os.unlink(temp_png)
 
     scan_command = ["zbarimg", "--raw", "-q", "-Sdisable", "-Sqrcode.enable"] + image_paths
     result = subprocess.run(scan_command, capture_output=True)
