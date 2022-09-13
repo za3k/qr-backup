@@ -747,7 +747,7 @@ def main_backup(args):
             self_test_success = self_test.returncode==0
         else:
             logging.info("Performing linux CLI restore check...")
-            linux_test_command = "convert -density 300 {} png:- | zbarimg --raw -q -Sdisable -Sqrcode.enable | {} | cmp {}".format(output_path, test_restore_cmd, input_path)
+            linux_test_command = "convert -density 300 {} png:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | {} | cmp {}".format(output_path, test_restore_cmd, input_path)
             linux_success = (subprocess.call(linux_test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
             logging.info("Performing qr-backup restore check...")
             self_test_command = ["python3", sys.argv[0], "--restore", "--sha256", sha256sum, output_path]
