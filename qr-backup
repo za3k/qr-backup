@@ -2,10 +2,10 @@
 """
 Takes a binary file, and outputs a "paper backup": a printable pdf full of QR codes. 
 
-Following the directions in the pdf, the QR codes can be re-scanned or photographed using a webcame to restore the original file.
+Following the directions in the pdf, the QR codes can be re-scanned or photographed using a webcam to restore the original file.
 
 Requirements to make the PDF: python 'qrcode' library, imagemagick, img2pdf
-Requirements to restore from the PDF: zbar (only)
+Requirements to restore from the PDF: zbar (only), imagemagick (temporary)
 """
 import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageOps
 import english_wordlist
@@ -300,7 +300,7 @@ def qr_codes(data, error_correction, version, scale):
 def generate_passphrase():
     return ' '.join(random.choices(english_wordlist.words, k=8))
 
-# I took a look at the 'gnupg' library... it doesn't support bytes, and it isn't really designed to do symmetric encryption/decryption either.
+# I took a look at the python 'gnupg' library... it doesn't support bytes, and it isn't really designed to do symmetric encryption/decryption either.
 def encrypt(content_bytes, passphrase, armor=False, cipher="AES256"):
     # I chose to hardcode an encryption cipher, to make documenting the restore easier. This does make it harder to futureproof, and some people may distrust AES already.
     result = subprocess.run(["gpg", "--symmetric", "--no-symkey-cache", "--passphrase", passphrase, "--batch", "--cipher-algo"] + (["--armor"] if armor else []), capture_output=True, input=content_bytes)

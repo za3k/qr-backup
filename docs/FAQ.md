@@ -33,7 +33,7 @@ qr-backup on default settings (but with compression disabled) backs up about 3KB
 I picked these settings by experimenting with the restore process on my computer. If I use a higher data rate, zbarcam can't consistently recognize the QR codes using my laptop webcam.  That said, you're welcome to see if your computer can [handle more](#how-do-i-back-up-more-data-per-page).
 
 ## How do I back up more data per page?
-Sure, maybe you have a better webcam/scanner than I do. Past that, you can just shove more data in, but there will be costs to doing so (you'll lose other benefits).
+Sure, maybe you have a better webcam/scanner than I do, in which case you can increase settings, and the only cost if that people with bad webcams like me can't restore. Once you hit your webcam's limit, you can still shove more data in, but there will be cost tradeoffs as you lose reliability.
 
 Before changing the QR size and scale, test your restore! Looking OK to your eyes is not enough. I tried making the default settings more aggressive, but I actually can't scan smaller QR codes on my laptop webcam.
 
@@ -53,14 +53,13 @@ If you lose one page, or even one QR code (like if it's torn off or you spill gr
 There are some command-line options that reduce the damage:
 
 - `--num-copies` prints duplicates of QR codes. If you're printing duplicates, I recommend three copies (rather arbitrarily).
-- `--no-compress` disables compression. This makes the backup longer, but it means that if you have 50% of the data, you can recover 50% of the file. For some backup types (text documents) this is useful. For others (bitcoin wallets) it is not. Make sure your document doesn't contain weird characters (including "\r", the mac/windows newline), or base64 encoding will turn on, which makes recovery harder.
-- There is an open [feature request](https://github.com/za3k/qr-backup/issues/2) to improve this and let you lose some QR codes.
+- `--no-compress` disables compression. This makes the backup longer, but it means that if you have 50% of the data, you can recover 50% of the file. For some backup types (text documents) this is useful. For others (bitcoin wallets) it is not.
 
 ## Why don't you support windows?
 I might someday, I just haven't done it yet.
 
 - I don't use Windows myself
-- I want the restore process to work WITHOUT qr-backup software. I'm not sure how to do this on Windws yet.
+- I want the restore process to work WITHOUT qr-backup software. I'm not sure how to do this on Windows yet.
 
 In the meantime, you could try [a different paper backup program](#what-other-paper-backup-projects-exist).
 
@@ -99,7 +98,7 @@ That's up to you.
 
 I don't, because I think it's likely that I'll forget my password in 5-10 years. But, I'm not backing up my bitcoin wallet either.
 
-There is an open [feature request](https://github.com/za3k/qr-backup/issues/4) to add this to qr-backup directly. Until then, if you want to password-protect your backup, you'll need to do it yourself. I'd use `gpg --symmetric` to encrypt and `gpg --decrypt` to decrypt (because gpg is widely available). 
+**New in v1.1:** Use `--encrypt generate` or `--encrypt <PASS>` to password-protect your backup. Behind the scenes, this just calls gpg.
 
 If you do need to encrypt your backup, remember that you can write your password down (somewhere different!) on physical paper. Preferably several places--you need to remember where it's written. 
 
@@ -125,6 +124,8 @@ Then (in order):
 - Protect against fire damage. The best way to protect against fire damage to paper is to have a copy in another building.
 
 ## What are the design goals of qr-backup?
+Okay, nobody asks this, but it's the most frequent reason I say no to a feature request.
+
 - It should be very easy to restore the backup
 - It should actually work on my actual computer, on default settings
 - It should actually work with low-quality hardware (ex bad black-and-white printer and bad webcam)
@@ -170,14 +171,14 @@ Here's how they are similar/different
 - Paperbak is focused around shoving the most data on paper possible (with some nice extras). qr-backup is focused on easy restore that actually works (with some nice extras).
 - I'm not super clear if Paperback actually/still works end to end (haven't tested it firsthand, because no Windows). I'll check if I can get cyphar to work on Linux. It would definitely be a good second tool, I'd probably use both.
 - Paperbak is designed to want a high-quality scanner (3x print dpi). qr-backup can use a webcam, sucky scanner, or whatever else that can read QR codes with a little hacking.
-- At a best estimate, default settings are 300X more data per page on Paperbak. Even at more aggressive qr-backup settings, I bet that's 10-30X. Part of this is QR--most of it is needing a really good scanner (aside from quality, webcams have focus length and stability issues, and I'm not sure zbar is that great).
+- At a best estimate, with default settings, Paperbak stores 300KB/page, and qr-backup stores 3KB/page. Most of this is Paperbak requiring a good scanner, and qr-backup requiring an average webcam. QR, zbar, and qr-backup inefficiencies also contribute some.
 - Paperbak uses a proprietary format, and needs Paperbak to restore. qr-backup uses an esoteric mix of existing formats like QR and gzip, and can be restored with a bash oneliner of standard linux tools.
 - Paperbak uses reed-solomon coding, so you can lose part of the page(s) and still restore. This isn't implemented in qr-backup yet.
 - Both support compression.
-- Paperbak offers encryption. This isn't implemented in qr-backup yet.
+- Both support encryption.
 - qr-backup prints a bunch of human-readable info on the page explaining what it is and how to restore. Paperbak optionally prints a little of this (mostly the file name, size, and date)
 - Both are black-and-white only
-- qr-backup is designed to someday work as an easy app on phones, because it's based around digital cameras instead of scanners. It wouldn't be possible or useful to do this with paperbak.
+- qr-backup is designed to someday work as an easy app on phones. It wouldn't be possible or useful to do this with paperbak, because it requires a scanner.
 - qr-backup is maintained (well, as of writing this FAQ answer, at least!)
 
 ## What other paper backup projects exist?
