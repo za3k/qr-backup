@@ -182,7 +182,8 @@ IMAGE_MODE="L"
 WHITE=255
 BLACK=0
 
-CONVERSION_DENSITY = 900 # pdf to pixel-based format conversion hack
+CONVERSION_DENSITY = 300 # pdf to pixel-based format conversion hack
+ZBAR_WARNING_THRESHOLD = 1.0 # do we want to accept that zbar just can't scan the perfect original?
 
 VERSIONS_BITS = {
     # Binary bits for each version size, 1-40
@@ -738,9 +739,12 @@ def main_backup(args):
             logging.info("Performing linux CLI restore check...")
             # convert -density 300 is to work around errors in zbarcam. I offered an upstream patch as https://github.com/mchehab/zbar/pull/227
             linux_test_command = "convert -density {} pdf:- tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | {}".format(CONVERSION_DENSITY, test_restore_cmd)
+            linux_test_rate_command = "convert -density {} pdf:- tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | wc -l".format(CONVERSION_DENSITY, test_restore_cmd)
             logging.info("Test command was: {}".format(linux_test_command))
             linux_test = subprocess.run(linux_test_command, shell=True, capture_output=True, input=tmp_pdf.getbuffer())
             linux_success = linux_test.returncode==0 and linux_test.stdout == original_content
+            logging.info("Test command was: {}".format(linux_test_rate_command))
+            linux_test_rate = subprocess.run(linux_test_rate_command, shell=True, capture_output=True, input=tmp_pdf.getbuffer())
 
             logging.info("Performing qr-backup restore check...")
             self_test_command = ["python3", sys.argv[0], "--restore", "--sha256", sha256sum, "-"]
@@ -751,8 +755,11 @@ def main_backup(args):
         else:
             logging.info("Performing linux CLI restore check...")
             linux_test_command = "convert -density {} {} tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | {} | cmp {}".format(CONVERSION_DENSITY, output_path, test_restore_cmd, input_path)
+            linux_test_rate_command = "convert -density {} {} tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | wc -l".format(CONVERSION_DENSITY, output_path, test_restore_cmd)
             logging.info("Test command was: {}".format(linux_test_command))
             linux_success = (subprocess.call(linux_test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
+            logging.info("Test command was: {}".format(linux_test_rate_command))
+            linux_test_rate = subprocess.run(linux_test_rate_command, shell=True, capture_output=True, input=tmp_pdf.getbuffer())
 
             logging.info("Performing qr-backup restore check...")
             self_test_command = ["python3", sys.argv[0], "--restore", "--sha256", sha256sum, output_path]
@@ -760,8 +767,12 @@ def main_backup(args):
                 self_test_command += ["--encrypt", encryption_passphrase]
             self_test_success = (subprocess.call(self_test_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
 
+        qrs_read = int(linux_test_rate.stdout)
+        qrs_fraction_read = qrs_read / len(qrs)
+        logging.info("Read {}/{} qrs ({:.2f}%)".format(qrs_read, len(qrs), qrs_fraction_read*100))
         if not linux_success:
-            logging.error("!!Automatic digital restore verification FAILED (linux CLI). This indicates a bug in either zbarimg (more likely) or in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
+            if qrs_fraction_read < ZBAR_WARNING_THRESHOLD:
+                logging.error("!!Automatic digital restore verification FAILED (linux CLI). This indicates a bug in either zbarimg (more likely) or in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
             #sys.exit(1)
         elif not self_test_success:
             logging.error("!!Automatic digital restore verification FAILED (self-test). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
