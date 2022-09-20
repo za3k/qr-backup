@@ -27,6 +27,7 @@ Paper is not the best or most efficient storage method, so you can't back up big
 - A printer
 - python 3.6 or later
 - python-qrcode
+- python-reedsolo
 - python-pillow
 - imagemagick
 - zbar (optional, used to digitally test restore)
@@ -36,6 +37,7 @@ Paper is not the best or most efficient storage method, so you can't back up big
 - A webcam or scanner
 - imagemagick
 - zbar
+- python-reedsolo (if using qr-restore)
 
 ## Making a backup
 1. Run qr-backup on your file. On the Linux command-line, run `qr-backup <YOUR_FILE>`

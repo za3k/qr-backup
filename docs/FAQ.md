@@ -16,6 +16,7 @@
 - [How do I back up multiple files?](#how-do-i-back-up-multiple-files)
 - [How does qr-backup compare to OllyDbg's Paperback?](#how-does-qr-backup-compare-to-ollydbgs-paperback)
 - [What other paper backup projects exist?](#what-other-paper-backup-projects-exist)
+<!-- - [Can I restore backups made using older versions of qr-backup?](#???) -->
 
 # Answers
 
@@ -42,13 +43,18 @@ Before changing the QR size and scale, test your restore! Looking OK to your eye
 - Use higher-data QR codes with `--qr-version <version>` (default 10, max 40). Bigger codes doesn't always mean more data, because bigger codes don't always fit on the page. Pass `-v` to see how many KB/page you're getting. 
 - Reduce error correction using `--error-correction L`. This makes your backup more sensitive to things like paper folds and dirt.
 - [Maximize](#how-do-i-find-the-maximum-dimensions-of-my-printer) your page size
+- Turn off erasure coding with `--no-erasure-coding`. This means losing a single QR code will hose your data. I strongly recommend against.
 - Test and restore using a high-quality scanner, not a webcam.
 - Use a [different paper backup program](#what-other-paper-backup-projects-exist). Ultimately, this is designed to make restores easy, not to pack data in as densely as posible.
 
 The absolute max qr-backup allows is about 200KB/page at `--scale 1`, but you'll never be able to read something that small in practice.
 
 ## How much of my backup can I lose and still restore?
-If you lose one page, or even one QR code (like if it's torn off or you spill grape juice), you're hosed. You won't be able to restore. If some dirt, a pen mark, etc gets on a QR code, you'll be fine.
+Depends whether you have qr-backup when you're doing the restore.
+
+**New in v1.1**: If you restore using qr-backup, you can lose up any 30% of the pages or QR codes, no more. The technology used is called erasure coding. It's the same thing that lets you read a damaged CD, a bit flip in ECC RAM, or a damaged zraid volume.
+
+If you don't have qr-backup, it's more fragile. If you lose one page, or even one QR code (like if it's torn off or you spill grape juice), you're hosed. You won't be able to restore. If some dirt, a pen mark, etc gets on a QR code, you'll be fine.
 
 There are some command-line options that reduce the damage:
 
@@ -75,12 +81,16 @@ The exact commands to run are described in the README and on the printed backup.
 If find this explanation helpful, run qr-backup with the `--instructions both` option to add it to the paper backup.
 
 The backup process:
+- A sha256 sum of the original file is printed on the paper.
 - If compression is on, data is compressed using gzip
 - If encryption is on, data is password-protected with GPG in symmetric mode.
+- The length of the data is added at the beginning.
+- The data is padded to make it a round number of chunks (see below)
 - The data is now preprocessed.
 - The data is split into small chunks, about 2K each with the default settings.
+- We use erasure coding to generate redundant "parity chunks" from the normal chunks. This adds 42% more chunks.
 - Each chunk is base64 encoded.
-- Labels are added. If there are 50 chunks, the first is labeled "N01/50" and the last is "N50/50".
+- Labels are added. If there are 50 chunks, the first is labeled "N01/50" and the last is "N50/50". Parity chunks are labeled "P01/21" through "P21/21".
 - Each chunk is printed as a QR code on the paper, and labeled with the same code label.
 
 The restore process is
@@ -88,7 +98,10 @@ The restore process is
 - Since each code contains the code number (01-50), the computer sorts everything out, making sure each code 01-50 is present exactly once. The codes are put in order (and duplicates removed).
 - The "N01/50" thru "N50/50" labels are removed. Any chunk with an unexpected label is thrown out (for forwards compatibility).
 - Each chunk is base64-decoded
-- The chunks are appended together. This has restored the preprocessed data.
+- If any normal chunks are missing, we use erasure coding to restore missing normal chunks using parity chunks.
+- The normal chunks are appended together.
+- The data starts with a length. We remove this, and remove the padding at the end using the length information.
+- This has restored the preprocessed data.
 - If the data was encrypted, it is decrypted with GPG in symmetric mode.
 - If the data was compressed, it's decompressed. The file is now restored.
 - The file is checksummed using sha256, which verifies the file is perfectly restored.
@@ -155,6 +168,9 @@ I believe there is a remaining [issue](https://github.com/OpenPrinting/cups-filt
 ## When I print the backup, the last page is rotated
 Pass CUPS the option 'nopdfAutoRotate'.
 
+## Can I restore backups made using older versions of qr-backup?
+No, but I'll try to support it going forward.
+
 ## How do I back up multiple files?
 1. You can run `qr-backup` multiple times, and print each PDF. If you lose any of the QR codes, you won't be able to restore that file.
 2. OR, you can tar/zip the files, and back up the tar/zip. If you lose any of the QR codes, you won't be able to restore **any** of the files.
@@ -173,7 +189,7 @@ Here's how they are similar/different
 - Paperbak is designed to want a high-quality scanner (3x print dpi). qr-backup can use a webcam, sucky scanner, or whatever else that can read QR codes with a little hacking.
 - At a best estimate, with default settings, Paperbak stores 300KB/page, and qr-backup stores 3KB/page. Most of this is Paperbak requiring a good scanner, and qr-backup requiring an average webcam. QR, zbar, and qr-backup inefficiencies also contribute some.
 - Paperbak uses a proprietary format, and needs Paperbak to restore. qr-backup uses an esoteric mix of existing formats like QR and gzip, and can be restored with a bash oneliner of standard linux tools.
-- Paperbak uses reed-solomon coding, so you can lose part of the page(s) and still restore. This isn't implemented in qr-backup yet.
+- Both support reed-solomon coding, so you can lose part of the page(s) and still restore. Both require the original program to restore using error correction.
 - Both support compression.
 - Both support encryption.
 - qr-backup prints a bunch of human-readable info on the page explaining what it is and how to restore. Paperbak optionally prints a little of this (mostly the file name, size, and date)
