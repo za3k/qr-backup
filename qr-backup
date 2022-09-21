@@ -1365,8 +1365,7 @@ def main_restore(args):
     # Call a subprocess to do the restore
     if restore_method == "images":
         logging.info("image restore selected")
-        codes = list(image_restore(pargs))
-        restore_generator = iter(codes)
+        restore_generator = image_restore(pargs)
     elif restore_method == "webcam":
         logging.info("webcam restore selected")
         restore_generator = webcam_restore(use_display=use_display)
@@ -1447,8 +1446,6 @@ def main_restore(args):
 
     # Close subprocess
     try:
-        logging.info("Closing")
-        # TODO: Sometimes one extra code needs to be read before it closes, fix that.
         restore_generator.send(True)
     except StopIteration:
         pass
