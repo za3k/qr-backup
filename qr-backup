@@ -339,6 +339,7 @@ def generate_chunks(data, chunk_size_base64, allowable_loss_fraction=0):
     if num_parity_chunks > 0:
         binary_parity_chunks = generate_erasure(binary_chunks, allowable_loss_fraction)
         assert num_parity_chunks == len(binary_parity_chunks)
+        assert all(len(chunk_data_bytes) == payload_size_bytes for chunk_data_bytes in binary_parity_chunks)
 
     # Output the chunks
     ascii_chunks = []
@@ -359,7 +360,7 @@ def generate_chunks(data, chunk_size_base64, allowable_loss_fraction=0):
         label = prefix[:-1].decode('ascii')
         ascii_chunks.append((chunk_content, label))
     assert len(ascii_chunks) == num_qrs + num_parity_chunks
-    assert all(len(chunk) == chunk_size_base64 for chunk, label in ascii_chunks)
+    assert all(len(chunk) <= chunk_size_base64 for chunk, label in ascii_chunks)
 
     return chunk_digits, ascii_chunks
 
