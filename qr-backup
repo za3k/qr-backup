@@ -966,7 +966,7 @@ def main_backup(args):
     if not program_present("zbarimg"):
         logging.warning("Skipping digital restore verification, because zbarimg is not available.")
     elif not program_present("convert"):
-        logging.warning("Skipping digital restore verification, because 'convert' is not available to work around a bug in zbarimg.")
+        logging.warning("Skipping digital restore verification, because 'convert' is not available. convert is needed to work around a bug in zbarimg.")
     elif ubuntu_policy_problem():
         logging.warning("Skipping digital restore verification, because 'convert' is not available. Ubuntu forbids PDF conversion using imagemagick. More information at: https://github.com/za3k/qr-backup/tree/master/docs")
     else:
