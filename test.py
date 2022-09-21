@@ -1,4 +1,5 @@
 #!/bin/python3
+import hashlib
 import math
 import random
 import subprocess
@@ -12,62 +13,108 @@ def junk(length):
     return bytes(r.getrandbits(8) for _ in range(length))
 
 DEFAULT_ARGS = ["--skip-checks", "-"]
+DEFAULT_RESTORE_ARGS = ["-"]
 
 TESTS = [
     ("100b zeros", 
         zeros(100), [], 2**0,
-        b'ceac9c2b81d3b7db21503b9b2615f4736dd2e3264c91a0d8b56eb525f92d4d20  -\n'),
+        'ceac9c2b81d3b7db21503b9b2615f4736dd2e3264c91a0d8b56eb525f92d4d20',
+        [], 2**2),
     ("1K zeros", 
         zeros(1000), [], 2**0,
-        b"c801d618c10d97d64d45a50505256e95862220d6796c8fdcd516d6720c8c4f67  -\n"),
+        "c801d618c10d97d64d45a50505256e95862220d6796c8fdcd516d6720c8c4f67",
+        [], 2**2),
     ("10K zeros",
         zeros(10000), [], 2**0,
-        b"37fbff4fd69a82bd233db10ed5088b7bcaa71271a731fa5723c6dbc55ae9123a  -\n"),
+        "37fbff4fd69a82bd233db10ed5088b7bcaa71271a731fa5723c6dbc55ae9123a",
+        [], 2**2),
     ("100K zeros",
         zeros(100000), [], 2**0,
-        b'a69498e8084b398febb9f4939cb08d9c9a1ad60ae1543ea09a5b3f6f3177e7b1  -\n'),
+        'a69498e8084b398febb9f4939cb08d9c9a1ad60ae1543ea09a5b3f6f3177e7b1',
+        [], 2**2),
     ("100b random",
         junk(100), [], 2**0,
-        b'c72b36a7dfa20b4b5fb0a971c51af0fce99b51fb63ecb8836da2941c44729959  -\n'),
+        'c72b36a7dfa20b4b5fb0a971c51af0fce99b51fb63ecb8836da2941c44729959',
+        [], 2**2),
     ("1K random",
         junk(1000), [], 2**0,
-        b'f241c6423b2b379815e064044ef4da30468c6ebce9d1d858496fd36e7da222f3  -\n'),
+        'f241c6423b2b379815e064044ef4da30468c6ebce9d1d858496fd36e7da222f3',
+        [], 2**2),
     ("10K random",
         junk(10000), [], 2**3,
-        b'52e0d4c62c7b0ad61abfad3934dde2a6eea004345304a68eede13d1aa4f0d984  -\n'),
+        '52e0d4c62c7b0ad61abfad3934dde2a6eea004345304a68eede13d1aa4f0d984',
+        [], 2**4),
+        # Known failure. Blame it on zbarimg
     ("50K random",
         junk(50000), [], 2**5,
-        b'e6c67978627d840ecaf482b0c8ff4d20c271bf4c31f76b6d95f42fee1683223e  -\n'),
+        'e6c67978627d840ecaf482b0c8ff4d20c271bf4c31f76b6d95f42fee1683223e',
+        [], 2**7),
     ("1K zeros, self-check", 
-        zeros(1000), ["--no-skip-checks"], 2**3,
-        b"c801d618c10d97d64d45a50505256e95862220d6796c8fdcd516d6720c8c4f67  -\n"),
+        zeros(1000), ["--no-skip-checks"], 2**4,
+        "c801d618c10d97d64d45a50505256e95862220d6796c8fdcd516d6720c8c4f67",
+        [], 2**2),
     ("1K random, self-check",
         junk(1000), ["--no-skip-checks"], 2**4,
-        b'f241c6423b2b379815e064044ef4da30468c6ebce9d1d858496fd36e7da222f3  -\n'),
+        'f241c6423b2b379815e064044ef4da30468c6ebce9d1d858496fd36e7da222f3',
+        [], 2**2),
 ]
 
 failures = 0
-for name, input_bytes, options, time_limit, expected_output in TESTS:
+for name, input_bytes, options, time_limit, expected_sha, restore_options, restore_time_limit in TESTS:
+    failed = False
+
     options = DEFAULT_ARGS + options
-    qr_command = " ".join(["python", "qr-backup"] + options)
-    command = "{} | sha256sum".format(qr_command)
+    qr_command = " ".join(["python3", "qr-backup"] + options)
     start = time.time()
-    result = subprocess.run(command, shell=True, capture_output=True, input=input_bytes)
-    end = time.time()
-    elapsed = end - start
+    result = subprocess.run(qr_command, shell=True, capture_output=True, input=input_bytes)
+    elapsed = time.time() - start
+    output_bytes = result.stdout
+    sha = hashlib.sha256(output_bytes).hexdigest()
     elapsed, power = math.ceil(elapsed), math.ceil(math.log(elapsed, 2))
-    if result.stdout == expected_output:
-        print("+", name, "{}s".format(elapsed))
+
+    if sha == expected_sha:
+        print("+b", name, "{}s".format(elapsed))
     else:
-        print("-", name)
+        print("-b", name)
         print("  command:", command)
-        print("  result:", result.stdout, "!=", expected_output[:20])
+        print("  result:", sha, "!=", expected_sha)
         failures += 1
+        failed = True
     if elapsed > time_limit:
-        print("SLOW", name, "{}s, <2^{}".format(elapsed, power))
+        print("slow-b", name, "{}s, <2^{}".format(elapsed, power))
         failures += 1
+        failed = True
     elif elapsed <= time_limit / 3:
-        print("FAST", name, "{}s, <2^{}".format(elapsed, power))
+        print("fast-b", name, "{}s, <2^{}".format(elapsed, power))
         pass
+
+    restore_options = DEFAULT_RESTORE_ARGS + restore_options
+    restore_command = " ".join(["python3", "qr-backup", "--restore"] + restore_options)
+    start = time.time()
+    result2 = subprocess.run(restore_command, shell=True, capture_output=True, input=output_bytes)
+    elapsed = time.time() - start
+    restored_bytes = result2.stdout
+    elapsed, power = math.ceil(elapsed), math.ceil(math.log(elapsed, 2))
+
+    if input_bytes == restored_bytes:
+        print("+r", name, "{}s".format(elapsed))
+    else:
+        print("-r", name)
+        print("  command:", restore_command)
+        #print(input_bytes, restored_bytes)
+        failures += 1
+        failed = True
+    if elapsed > restore_time_limit:
+        print("slow-r", name, "{}s, <2^{}".format(elapsed, power))
+        failures += 1
+        failed = True
+    elif elapsed <= restore_time_limit / 3:
+        print("fast-r", name, "{}s, <2^{}".format(elapsed, power))
+        pass
+
+    if failed:
+        with open("failure.bin", "wb") as f:
+            f.write(input_bytes)
+        sys.exit(1)
 
 sys.exit(1 if failures > 0 else 0)
