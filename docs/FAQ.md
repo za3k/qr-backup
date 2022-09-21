@@ -1,4 +1,5 @@
 # Questions
+- [My self-test is failing on Ubuntu](???)
 - [How much data does this back up per page / why don't you back up more data per page?](#how-much-data-does-this-back-up-per-page)
 - [What are the advantages of paper backups?](#what-are-the-advantages-of-paper-backups)
 - [How do I back up more data per page?](#how-do-i-back-up-more-data-per-page)
@@ -19,6 +20,10 @@
 - [Can I restore backups made using older versions of qr-backup?](#can-i-restore-backups-made-using-older-versions-of-qr-backup)
 
 # Answers
+
+## My self-test is failing on Ubuntu
+
+Ubuntu has disabled ImageMagick working on PDFs. Check out [StackOverflow](https://askubuntu.com/questions/1081895/trouble-with-batch-conversion-of-png-to-pdf-using-convert) for information on disabling this policy, if you want to. Otherwise, test your restore by printing your backup.
 
 ## How much data does this back up per page?
 
