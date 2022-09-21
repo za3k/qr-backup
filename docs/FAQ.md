@@ -16,7 +16,7 @@
 - [How do I back up multiple files?](#how-do-i-back-up-multiple-files)
 - [How does qr-backup compare to OllyDbg's Paperback?](#how-does-qr-backup-compare-to-ollydbgs-paperback)
 - [What other paper backup projects exist?](#what-other-paper-backup-projects-exist)
-<!-- - [Can I restore backups made using older versions of qr-backup?](#???) -->
+- [Can I restore backups made using older versions of qr-backup?](#can-i-restore-backups-made-using-older-versions-of-qr-backup)
 
 # Answers
 
