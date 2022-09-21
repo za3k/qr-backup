@@ -682,7 +682,7 @@ def main_backup(args):
     use_tar = False
     num_copies = 1
     do_checks = True
-    logging.basicConfig(format=LOGGING_FORMAT, level=logging.FATAL)
+    verbose = False
 
     # parse arguments
     pargs = []
@@ -777,7 +777,7 @@ def main_backup(args):
         elif arg == "--shuffle":
             use_shuffle = True
         elif arg in ["-v", "--verbose"]:
-            logging.basicConfig(format=LOGGING_FORMAT, level=logging.INFO)
+            verbose = True
         elif arg == "-":
             pargs.append(arg)
         elif arg == "--":
@@ -788,6 +788,10 @@ def main_backup(args):
         else:
             pargs.append(arg)
 
+    if verbose:
+        logging.basicConfig(format=LOGGING_FORMAT, level=logging.INFO)
+    else:
+        logging.basicConfig(format=LOGGING_FORMAT, level=logging.FATAL)
     # Figure out input paths, output paths, and restore filename
 
     # Input: stdin, tarfile, or single file?
@@ -1373,7 +1377,7 @@ def main_restore(args):
     use_encryption = None
     encryption_passphrase = None
     use_erasure = None
-    logging.basicConfig(format=LOGGING_FORMAT, level=logging.FATAL)
+    verbose = False
 
     # Parse command-line arguments
     pargs = []
@@ -1417,7 +1421,7 @@ def main_restore(args):
             if not all(x in "0123456789abcdef" for x in expected_sha256sum) or len(expected_sha256sum) > 64:
                 show_help("Not a valid SHA256: {}".format(expected_sha256sum))
         elif arg in ["-v", "--verbose"]:
-            logging.basicConfig(format=LOGGING_FORMAT, level=logging.INFO)
+            verbose = True
         elif arg == "--webcam-restore":
             restore_method = "webcam"
         elif arg == "-":
@@ -1429,6 +1433,11 @@ def main_restore(args):
             show_help()
         else:
             pargs.append(arg)
+
+    if verbose:
+        logging.basicConfig(format=LOGGING_FORMAT, level=logging.INFO)
+    else:
+        logging.basicConfig(format=LOGGING_FORMAT, level=logging.FATAL)
 
     assert len([x for x in pargs if x == "-"]) <= 1, "stdin can be listed as an image only once"
     if restore_method is None and len(pargs) == 0 and not sys.stdin.isatty():
