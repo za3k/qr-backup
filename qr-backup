@@ -1340,7 +1340,6 @@ def main_restore(args):
     if restore_method == "images":
         logging.info("image restore selected")
         codes = list(image_restore(pargs))
-        print(codes)
         restore_generator = iter(codes)
     elif restore_method == "webcam":
         logging.info("webcam restore selected")
