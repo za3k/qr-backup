@@ -1039,7 +1039,7 @@ def self_test_restore(restore_cmd, input_path, output_path, output_buffer, origi
         if use_buffers:
             logging.info("self-test using buffers")
             logging.info("Performing linux CLI restore check...")
-            # convert -density 300 is to work around errors in zbarcam. I offered an upstream patch as https://github.com/mchehab/zbar/pull/227
+            # convert -density 300 is to work around errors in zbarimg. I offered an upstream patch as https://github.com/mchehab/zbar/pull/227
             linux_test_command = "convert -density {} pdf:- tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | {}".format(CONVERSION_DENSITY, test_restore_cmd)
             linux_test_rate_command = "convert -density {} pdf:- tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | wc -l".format(CONVERSION_DENSITY, test_restore_cmd)
             logging.info("Linux CLI command was: {}".format(linux_test_command))
@@ -1103,20 +1103,24 @@ def image_restore(image_paths):
             os.unlink(t)
         except FileNotFoundError:
             pass
-    if any(path.endswith(".pdf") for path in image_paths):
+    def _is_pdf(path):
+        return path.endswith(".pdf") or path == "-"
+    if any(_is_pdf(path) for path in image_paths):
         if ubuntu_policy_problem():
             logging.fatal("'convert' is not available for PDFs. Ubuntu forbids PDF conversion using imagemagick. More information at: https://github.com/za3k/qr-backup/tree/master/docs")
 
         temporary = []
         new_image_paths = []
         for image in image_paths:
-            if image.endswith(".pdf"):
+            if _is_pdf(image):
+                logging.info("Converting to tif: {}".format(image))
                 handle, temp_tif = tempfile.mkstemp(suffix=".tif")
                 temporary.append((handle, temp_tif))
                 atexit.register(_remove_file, temp_tif)
                 subprocess.run(["convert", "-density", str(CONVERSION_DENSITY), image, temp_tif], stderr=subprocess.DEVNULL)
                 new_image_paths.append(temp_tif)
             else:
+                logging.info("Directly reading: {}".format(image))
                 new_image_paths.append(image)
         for line in image_restore(new_image_paths):
             yield line
@@ -1200,8 +1204,6 @@ def do_restore(codes, totals, use_erasure, use_compression, use_encryption, encr
         # Erasure decode
         normal_codes  = [decoded.get(expected_code) for expected_code in expected_codes_type(codes, totals, b'N')]
         erasure_codes = [decoded.get(expected_code) for expected_code in expected_codes_type(codes, totals, b'P')]
-        #print(totals, sorted(codes.keys()))
-        #print(normal_codes, erasure_codes)
         content = restore_erasure(normal_codes, erasure_codes, DEFAULT_ALLOWABLE_LOSS)
     else:
         # Concat
@@ -1337,7 +1339,9 @@ def main_restore(args):
     # Call a subprocess to do the restore
     if restore_method == "images":
         logging.info("image restore selected")
-        restore_generator = image_restore(pargs)
+        codes = list(image_restore(pargs))
+        print(codes)
+        restore_generator = iter(codes)
     elif restore_method == "webcam":
         logging.info("webcam restore selected")
         restore_generator = webcam_restore(use_display=use_display)
