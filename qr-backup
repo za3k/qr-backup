@@ -213,6 +213,17 @@ You will need a computing device and a great deal of technical expertise to rest
   library, but will be the same for each k and n. Use brute-force guessing on good data.
 """
 
+WEBCAM_MESSAGE = """
+==Webcam Restore==
+
+In a second, a second window with a webcam preview will appear on screen.
+You may need to resize or move the window to see this terminal.
+
+Progress and hints will appear in the terminal.
+
+Press Enter to start scanning codes.
+"""
+
 
 # Greyscale is required to work around https://github.com/python-pillow/Pillow/issues/6149
 IMAGE_MODE="L"
@@ -1172,7 +1183,9 @@ def webcam_restore(use_display):
         sys.exit(2)
 
     scan_command = ["zbarcam", "--raw", "-Sdisable", "-Sqrcode.enable"]
-    if not use_display:
+    if use_display:
+        input(WEBCAM_MESSAGE)
+    else:
         scan_command.append("--nodisplay")
 
     with subprocess.Popen(scan_command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL) as proc:
