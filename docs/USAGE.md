@@ -66,6 +66,9 @@ Backup options:
     --shuffle, --no-shuffle
         Spread QR codes across pages. This can help prevent data loss.
         Default: yes if erasure coding is enabled (default), no otherwise
+    --skip-checks, --no-skip-checks
+        Skip erasure code checks, self-restore checks.
+        Default: not skipped
 
 Restore options:
     --code-count-erasure COUNT, -c COUNT
