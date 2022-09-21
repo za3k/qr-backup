@@ -175,7 +175,8 @@ You will need a computing device and a great deal of technical expertise to rest
   base64 is detailed in RFC 4648 (base16, base32, and base64). The string "ZXhhbXBsZQ==" is decoded as "example".
   The command-line tool base64 or many commonly-available internet tools provide this function.
   It is reasonable to program a tool to decode base64 yourself. Convert from base-64 given above to base-256 (bytes).
-- The decoded base64 from every QR code is appended together in order.
+- (*) The decoded base64 from every 'N' QR code is appended together in order.
+- At the start of the file is the size (as an ascii decimal) after the space. Remove the length and end padding.
 - If the --encrypt option is given, the file must be decrypted.
   The details of GPG decryption are too long to include here, but the algorithm used was AES256.
 - If the --compress option is given, the file must be gzip-decompressed.
@@ -185,6 +186,11 @@ You will need a computing device and a great deal of technical expertise to rest
 - The file is checksummed using sha256, which verifies the file is perfectly restored.
   The checksum is detailed in United States NIST standard FIPS PUB 180-2 (SHA2)
   Many standard tools like sha256 perform this checksum.
+- The 'P' codes are reed-solomon erasure codes, used to restore missing 'N' codes at step (*)
+  To learn about reed-solomon erasure codes, consult a book about erasure coding. Codes are formed using the first byte of each 'N' code, then
+  the second, and so on. If there are more than 177 N codes, they are broken into groups of 177.
+  The parameters chosen are 1 < k < n < 255. n-k is likely to be 177 for all blocks except the last. The polynomial is chosen by an underlying
+  library, but will be the same for each k and n. Use brute-force guessing on good data.
 """
 
 L = qrcode.constants.ERROR_CORRECT_L
