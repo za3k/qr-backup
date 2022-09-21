@@ -1105,7 +1105,7 @@ def self_test_restore(restore_cmd, input_path, output_path, output_buffer, origi
         logging.info("Read {}/{} qrs ({:.2f}%)".format(qrs_read, expected_qrs, qrs_fraction_read*100))
         if not self_test_success:
             logging.error("!!Automatic digital restore verification FAILED (self-test). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
-            #sys.exit(1)
+            sys.exit(1)
         elif not linux_success:
             if qrs_fraction_read < ZBAR_WARNING_THRESHOLD:
                 logging.info("!!Automatic digital restore verification FAILED (linux CLI). This indicates a bug in zbarimg, most likely. Please report this to the author at https://github.com/za3k/qr-backup/issues")
@@ -1141,7 +1141,11 @@ def image_restore(image_paths):
                 handle, temp_tif = tempfile.mkstemp(suffix=".tif")
                 temporary.append((handle, temp_tif))
                 atexit.register(_remove_file, temp_tif)
-                subprocess.run(["convert", "-density", str(CONVERSION_DENSITY), image, temp_tif], stderr=subprocess.DEVNULL)
+                result = subprocess.run(["convert", "-density", str(CONVERSION_DENSITY), image, temp_tif], capture_output=True)
+                if result.returncode != 0:
+                    logging.info("[convert stdout] {}".format(result.stdout))
+                    logging.info("[convert stderr] {}".format(result.stderr))
+                    logging.fatal("Conversion from PDF to TIF failed: {}".format(image))
                 new_image_paths.append(temp_tif)
             else:
                 logging.info("Directly reading: {}".format(image))
@@ -1158,6 +1162,7 @@ def image_restore(image_paths):
     for line in result.stdout.split(b"\n"):
         if line != b'':
             yield line
+    logging.info("[zbarimg stderr] {}".format(result.stderr))
 
 def webcam_restore(use_display):
     if not program_present("zbarcam"):
