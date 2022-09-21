@@ -503,23 +503,28 @@ def restore_erasure(normal_codes, erasure_codes, allowable_loss_fraction):
         assert len(simple_restore) == len(normal_codes)*chunk_size
         return simple_restore
 
+def qr_for(data, version, error_correction, scale):
+    naive_chunk_size = qr_size_chars(version, QR_MODE, error_correction)
+    assert len(data) <= naive_chunk_size
+
+    qr = qrcode.QRCode(
+        version=version,
+        error_correction=error_correction,
+        box_size=scale,
+        border=0,
+    )
+    qr.add_data(qrcode.util.QRData(data, mode=QR_MODE), optimize=0)
+    qr.make(fit=False)
+    return qr
+
 def qr_codes(data, error_correction, version, scale, do_checks, allowable_loss_fraction=0):
     naive_chunk_size = qr_size_chars(version, QR_MODE, error_correction)
     chunk_digits, chunks = generate_chunks(data, naive_chunk_size, do_checks=do_checks, allowable_loss_fraction=allowable_loss_fraction)
 
-    qrs = []
-    for data, label in chunks:
-        qr = qrcode.QRCode(
-            version=version,
-            error_correction=error_correction,
-            box_size=scale,
-            border=0,
-        )
-        assert len(data) <= naive_chunk_size
-        qr.add_data(qrcode.util.QRData(data, mode=QR_MODE), optimize=0)
-        qr.make(fit=False)
-        qrs.append(QR(qr, label))
     qr_pad = scale*4
+
+    assert all(len(data) <= naive_chunk_size for data, label in chunks)
+    qrs = [QR(qr_for(data, version, error_correction, scale), label) for data, label in chunks]
 
     return chunk_digits, qr_pad, qrs
 
@@ -795,7 +800,7 @@ def main_backup(args):
         allowable_loss_fraction = 0
 
     nice_cmd = ' '.join([x for x in ["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_points), str(page_h_points), '--compress' if use_compression else '--no-compress', "--filename", '--encrypt ???' if use_encryption else None, "--use-erasure-coding" if use_erasure_coding else None, "--shuffle" if use_shuffle else "--no-shuffle", restore_file] if x is not None])
-    if GENERATE_DOCS:
+    if GENERATE_DOCS: # example.png should be reproducible
         backup_date = "2021-06-15"
     else:
         backup_date = datetime.date.today().strftime("%Y-%m-%d")
@@ -986,6 +991,38 @@ def main_backup(args):
             f.write(tmp_pdf.getbuffer())
 
     # Self-test
+    if do_checks:
+        self_test_restore(
+            restore_cmd,
+            input_path=input_path,
+            output_path=output_path,
+            output_buffer=tmp_pdf.getbuffer(),
+            original_content=original_content,
+            use_buffers=use_stdout or use_stdin,
+            sha256sum=sha256sum,
+            use_encryption=use_encryption,
+            encryption_passphrase=encryption_passphrase,
+            expected_qrs=len(qrs),
+        )
+    else:
+        logging.info("Skipping checks (--skip-checks passed).")
+
+    # --generate-docs secret flag
+    if GENERATE_DOCS: 
+        generate_docs(pages)
+
+def generate_docs(pages):
+    """secret --generate-docs flag updates USAGE.md and docs/example.png"""
+    pages[0].save("docs/example.png")
+    with open("docs/USAGE.md", "w") as f:
+        f.write("Output of `qr-backup --help`:\n")
+        f.write("\n")
+        f.write("```\n")
+        f.write(HELP)
+        f.write("\n")
+        f.write("```\n")
+
+def self_test_restore(restore_cmd, input_path, output_path, output_buffer, original_content, use_buffers, sha256sum, use_encryption, encryption_passphrase, expected_qrs):
     if use_encryption:
         test_restore_cmd = restore_cmd.replace("gpg --decrypt", "gpg --decrypt --no-symkey-cache --batch --passphrase '{}'".format(encryption_passphrase))
         logging.info("Restore command used in Linux CLI test: " + test_restore_cmd)
@@ -998,48 +1035,50 @@ def main_backup(args):
         logging.warning("Skipping digital restore verification, because 'convert' is not available. convert is needed to work around a bug in zbarimg.")
     elif ubuntu_policy_problem():
         logging.warning("Skipping digital restore verification, because 'convert' is not available. Ubuntu forbids PDF conversion using imagemagick. More information at: https://github.com/za3k/qr-backup/tree/master/docs")
-    elif not do_checks:
-        logging.info("Skipping checks (--skip-checks passed).")
     else:
-        if use_stdout or use_stdin:
+        if use_buffers:
+            logging.info("self-test using buffers")
             logging.info("Performing linux CLI restore check...")
             # convert -density 300 is to work around errors in zbarcam. I offered an upstream patch as https://github.com/mchehab/zbar/pull/227
             linux_test_command = "convert -density {} pdf:- tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | {}".format(CONVERSION_DENSITY, test_restore_cmd)
             linux_test_rate_command = "convert -density {} pdf:- tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | wc -l".format(CONVERSION_DENSITY, test_restore_cmd)
-            logging.info("Test command was: {}".format(linux_test_command))
-            linux_test = subprocess.run(linux_test_command, shell=True, capture_output=True, input=tmp_pdf.getbuffer())
+            logging.info("Linux CLI command was: {}".format(linux_test_command))
+            linux_test = subprocess.run(linux_test_command, shell=True, capture_output=True, input=output_buffer)
             linux_success = linux_test.returncode==0 and linux_test.stdout == original_content
             logging.info("Linux CLI exit code was: {}".format(linux_test.returncode))
             logging.info("Test command was: {}".format(linux_test_rate_command))
-            linux_test_rate = subprocess.run(linux_test_rate_command, shell=True, capture_output=True, input=tmp_pdf.getbuffer())
+            linux_test_rate = subprocess.run(linux_test_rate_command, shell=True, capture_output=True, input=output_buffer)
 
             logging.info("Performing qr-backup restore check...")
             self_test_command = ["python3", sys.argv[0], "--restore", "--sha256", sha256sum, "-"]
             if use_encryption:
                 self_test_command += ["--encrypt", encryption_passphrase]
-            self_test = subprocess.run(self_test_command, capture_output=True, input=tmp_pdf.getbuffer())
+            self_test = subprocess.run(self_test_command, capture_output=True, input=output_buffer)
             self_test_success = self_test.returncode==0
+            logging.info("Self-test command was: {}".format(self_test_command))
             logging.info("Self-test exit code was: {}".format(self_test.returncode))
         else:
+            logging.info("self-test using files")
             logging.info("Performing linux CLI restore check...")
             linux_test_command = "convert -density {} {} tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | {} | cmp {}".format(CONVERSION_DENSITY, output_path, test_restore_cmd, input_path)
             linux_test_rate_command = "convert -density {} {} tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | wc -l".format(CONVERSION_DENSITY, output_path, test_restore_cmd)
-            logging.info("Test command was: {}".format(linux_test_command))
+            logging.info("Linux CLI command was: {}".format(linux_test_command))
             linux_success = (subprocess.call(linux_test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
             logging.info("Linux CLI exit code was: {}".format(linux_success))
             logging.info("Test command was: {}".format(linux_test_rate_command))
-            linux_test_rate = subprocess.run(linux_test_rate_command, shell=True, capture_output=True, input=tmp_pdf.getbuffer())
+            linux_test_rate = subprocess.run(linux_test_rate_command, shell=True, capture_output=True)
 
             logging.info("Performing qr-backup restore check...")
             self_test_command = ["python3", sys.argv[0], "--restore", "--sha256", sha256sum, output_path]
             if use_encryption:
                 self_test_command += ["--encrypt", encryption_passphrase]
             self_test_success = (subprocess.call(self_test_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
+            logging.info("Self-test command was: {}".format(self_test_command))
             logging.info("Self-test exit code was: {}".format(self_test_success))
 
         qrs_read = int(linux_test_rate.stdout)
-        qrs_fraction_read = qrs_read / len(qrs)
-        logging.info("Read {}/{} qrs ({:.2f}%)".format(qrs_read, len(qrs), qrs_fraction_read*100))
+        qrs_fraction_read = qrs_read / expected_qrs
+        logging.info("Read {}/{} qrs ({:.2f}%)".format(qrs_read, expected_qrs, qrs_fraction_read*100))
         if not self_test_success:
             logging.error("!!Automatic digital restore verification FAILED (self-test). This indicates a bug in qr-backup. Please report this to the author at https://github.com/za3k/qr-backup/issues")
             #sys.exit(1)
@@ -1051,16 +1090,6 @@ def main_backup(args):
             #sys.exit(1)
         else:
             logging.info("Automatic digital restore verification succeeded.")
-
-    if GENERATE_DOCS:
-        pages[0].save("docs/example.png")
-        with open("docs/USAGE.md", "w") as f:
-            f.write("Output of `qr-backup --help`:\n")
-            f.write("\n")
-            f.write("```\n")
-            f.write(HELP)
-            f.write("\n")
-            f.write("```\n")
 
 def image_restore(image_paths):
     # Special note: image_paths can include "-", in which case zbarimg will magically do the right thing
