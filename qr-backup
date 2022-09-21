@@ -241,6 +241,9 @@ DEFAULT_ALLOWABLE_LOSS = 0.3
 ERASURE_SPLIT = 177 # with allowable_loss_fraction=0.3, hits ERASURE_LIMIT of 254. TODO: Have it depend on allowable_loss_fraction instead of assuming DEFAULT_ALLOWABLE_LOSS?
 ERASURE_LIMIT = 254
 
+# Logging constants
+LOGGING_FORMAT = '%(levelname)s: %(message)s'
+
 # QR constants
 L = qrcode.constants.ERROR_CORRECT_L
 M = qrcode.constants.ERROR_CORRECT_M # default, 25%
@@ -684,6 +687,7 @@ def main_backup(args):
     use_tar = False
     num_copies = 1
     do_checks = True
+    logging.basicConfig(format=LOGGING_FORMAT, level=logging.FATAL)
 
     # parse arguments
     pargs = []
@@ -778,7 +782,7 @@ def main_backup(args):
         elif arg == "--shuffle":
             use_shuffle = True
         elif arg in ["-v", "--verbose"]:
-            logging.basicConfig(level=logging.INFO)
+            logging.basicConfig(format=LOGGING_FORMAT, level=logging.INFO)
         elif arg == "-":
             pargs.append(arg)
         elif arg == "--":
@@ -882,7 +886,11 @@ def main_backup(args):
         f = sys.stdin.buffer
     else:
         assert len(input_paths) == 1
-        f = open(input_paths[0], "rb")
+        try:
+            f = open(input_paths[0], "rb")
+        except FileNotFoundError:
+            logging.fatal("File does not exist: {}".format(input_paths[0]))
+            sys.exit(1)
 
     # read the entire file into memory
     try:
@@ -1370,6 +1378,7 @@ def main_restore(args):
     use_encryption = None
     encryption_passphrase = None
     use_erasure = None
+    logging.basicConfig(format=LOGGING_FORMAT, level=logging.FATAL)
 
     # Parse command-line arguments
     pargs = []
@@ -1413,7 +1422,7 @@ def main_restore(args):
             if not all(x in "0123456789abcdef" for x in expected_sha256sum) or len(expected_sha256sum) > 64:
                 show_help("Not a valid SHA256: {}".format(expected_sha256sum))
         elif arg in ["-v", "--verbose"]:
-            logging.basicConfig(level=logging.INFO)
+            logging.basicConfig(format=LOGGING_FORMAT, level=logging.INFO)
         elif arg == "--webcam-restore":
             restore_method = "webcam"
         elif arg == "-":
