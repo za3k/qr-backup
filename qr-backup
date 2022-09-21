@@ -1251,7 +1251,7 @@ def do_restore(codes, totals, use_erasure, use_compression, use_encryption, encr
         content = restore_erasure(normal_codes, erasure_codes, DEFAULT_ALLOWABLE_LOSS)
     else:
         # Concat
-        content = b''.join(decoded[x] for x in expected_codes(codes, code_count))
+        content = b''.join(decoded[x] for x in expected_codes(codes, totals))
 
     # Remove padding
     content = length_decode(content)
