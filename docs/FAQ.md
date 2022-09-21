@@ -1,5 +1,5 @@
 # Questions
-- [My self-test is failing on Ubuntu](???)
+- [My self-test is failing on Ubuntu](#my-self-test-is-failing-on-ubuntu)
 - [How much data does this back up per page / why don't you back up more data per page?](#how-much-data-does-this-back-up-per-page)
 - [What are the advantages of paper backups?](#what-are-the-advantages-of-paper-backups)
 - [How do I back up more data per page?](#how-do-i-back-up-more-data-per-page)
