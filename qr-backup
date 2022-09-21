@@ -343,22 +343,18 @@ def generate_chunks(data, chunk_size_base64, allowable_loss_fraction=0):
 
     # Output the chunks
     ascii_chunks = []
-    for i, chunk_data_bytes in enumerate(binary_chunks):
-        prefix = prefix_normal_format.format(i+1, num_qrs).encode('ascii')
-        chunk_data_base64 = base64.b64encode(chunk_data_bytes)
-        assert len(chunk_data_base64) <= payload_size_base64
-        chunk_content = prefix+chunk_data_base64
-        assert len(chunk_content) <= chunk_size_base64
-        label = prefix[:-1].decode('ascii')
-        ascii_chunks.append((chunk_content, label))
-    for i, chunk_data_bytes in enumerate(binary_parity_chunks):
-        prefix = prefix_parity_format.format(i+1, num_parity_chunks).encode('ascii')
-        chunk_data_base64 = base64.b64encode(chunk_data_bytes)
-        assert len(chunk_data_base64) <= payload_size_base64
-        chunk_content = prefix+chunk_data_base64
-        assert len(chunk_content) <= chunk_size_base64
-        label = prefix[:-1].decode('ascii')
-        ascii_chunks.append((chunk_content, label))
+    for bc, format_string in [
+            (binary_chunks, prefix_normal_format),
+            (binary_parity_chunks, prefix_parity_format)]:
+        for i, chunk_data_bytes in enumerate(bc):
+            prefix = format_string.format(i+1, len(bc)).encode('ascii')
+            chunk_data_base64 = base64.b64encode(chunk_data_bytes)
+            assert len(chunk_data_base64) <= payload_size_base64
+            chunk_content = prefix+chunk_data_base64
+            assert len(chunk_content) <= chunk_size_base64
+            label = prefix.decode('ascii').split("/")[0]
+            ascii_chunks.append((chunk_content, label))
+
     assert len(ascii_chunks) == num_qrs + num_parity_chunks
     assert all(len(chunk) <= chunk_size_base64 for chunk, label in ascii_chunks)
 
@@ -857,8 +853,7 @@ def main_backup(args):
     labeled = []
     for i, qr in enumerate(qrs):
         img = qr.qr.make_image()
-        #label = f"code {i+1:0>{code_digits}}/{len(qrs):0>{code_digits}} {restore_file}"
-        label = qr.label
+        label = f"code {i+1:0>{code_digits}}/{len(qrs):0>{code_digits}} ({qr.label})"
         labeled.append(add_label(img, label))
     logging.info(f"{len(qrs)} qr codes (at version {qr_version}) total")
 
@@ -993,7 +988,7 @@ def main_backup(args):
             linux_test_rate_command = "convert -density {} {} tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | wc -l".format(CONVERSION_DENSITY, output_path, test_restore_cmd)
             logging.info("Test command was: {}".format(linux_test_command))
             linux_success = (subprocess.call(linux_test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
-            logging.info("Linux CLI xit code was: {}".format(linux_success))
+            logging.info("Linux CLI exit code was: {}".format(linux_success))
             logging.info("Test command was: {}".format(linux_test_rate_command))
             linux_test_rate = subprocess.run(linux_test_rate_command, shell=True, capture_output=True, input=tmp_pdf.getbuffer())
 
