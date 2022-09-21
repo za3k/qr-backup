@@ -1,5 +1,4 @@
 # Questions
-- [My self-test is failing on Ubuntu](#my-self-test-is-failing-on-ubuntu)
 - [How much data does this back up per page / why don't you back up more data per page?](#how-much-data-does-this-back-up-per-page)
 - [What are the advantages of paper backups?](#what-are-the-advantages-of-paper-backups)
 - [How do I back up more data per page?](#how-do-i-back-up-more-data-per-page)
@@ -18,12 +17,9 @@
 - [How does qr-backup compare to OllyDbg's Paperback?](#how-does-qr-backup-compare-to-ollydbgs-paperback)
 - [What other paper backup projects exist?](#what-other-paper-backup-projects-exist)
 - [Can I restore backups made using older versions of qr-backup?](#can-i-restore-backups-made-using-older-versions-of-qr-backup)
+- [My self-test is failing on Ubuntu](#my-self-test-is-failing-on-ubuntu)
 
 # Answers
-
-## My self-test is failing on Ubuntu
-
-Ubuntu has disabled ImageMagick working on PDFs. Check out [StackOverflow](https://askubuntu.com/questions/1081895/trouble-with-batch-conversion-of-png-to-pdf-using-convert) for information on disabling this policy, if you want to. Otherwise, test your restore by printing your backup.
 
 ## How much data does this back up per page?
 
@@ -225,3 +221,10 @@ Dense pixel grid (like Paperbak). Everything in this section needs a good scanne
 - [paperback-cli](https://git.teknik.io/scuti/paperback-cli): Cross-OS port for OlyDbg's Paperbak program.
 - [ColorSafe](https://github.com/colorsafe/colorsafe): Black and white or color output. Split into sectors. Error correction is reed-solomon within a sector, none outside (as best I could find out).
 - [optar](http://ronja.twibright.com/optar/): Black and white. Uses Golay codes.
+
+## My self-test is failing on Ubuntu
+
+The generated PDF is probably fine, but can't be read. Ubuntu has disabled ImageMagick working on PDFs for security reasons. This breaks qr-backup's self-test process. You have two options.
+
+1. Disable or modify the security policy. Check out StackOverflow for information of [why](https://askubuntu.com/questions/1081895/trouble-with-batch-conversion-of-png-to-pdf-using-convert) and [how to disable it](https://askubuntu.com/questions/1127260/imagemagick-convert-not-allowed) if you want.
+2. Test your restore by printing your backup.
