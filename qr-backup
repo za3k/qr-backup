@@ -1058,7 +1058,7 @@ def image_restore(image_paths):
         for handle, temp_tif in temporary:
             os.close(handle)
             _remove_file(temp_tif)
-        at.unregister(_remove_file)
+        atexit.unregister(_remove_file)
 
     scan_command = ["zbarimg", "--raw", "-q", "-Sdisable", "-Sqrcode.enable"] + image_paths
     result = subprocess.run(scan_command, capture_output=True)
