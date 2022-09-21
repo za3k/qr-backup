@@ -45,6 +45,9 @@ Backup options:
     --note TEXT
         Add a special note to the printout instructions. Can be anything.
         Default: no note
+    --num-copies NUMBER
+        Print multiple copies of each QR code for redundancy.
+        Default: 1
     --output FILENAME, -o FILENAME
         Set the output pdf path (redirecting stdout also works).
         Default: <FILE>.qr.pdf

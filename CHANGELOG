@@ -2,9 +2,6 @@ v1.1 (not released)
 - Added the `--restore` option so qr-backup will do the restore for you.
 - Add erasure coding, which is turned on by default. This allows losing up
   to 30% of QR codes, but only if you are restoring using qr-backup.
-- Add `--shuffle`, `--no-shuffle`. This randomly orders QR codes. It's turned
-  on by default is you use erasure coding. Losing random codes is better than
-  losing consecutive codes for restore.
 - Added encryption. New command-line options:
   - `--encrypt PASS` uses a passphrase you supply.
   - `--encrypt generate` generates a random passphrase for you (printed on a
@@ -18,6 +15,10 @@ v1.1 (not released)
   used. Currently the check sometimes fails because zbar is unreliable, so
   failure only prints a warning.
 - Added `-o`, `--output` option to give the name of an output file.
+- Add `--shuffle`, `--no-shuffle`. This randomly orders QR codes. It's turned
+  on by default is you use erasure coding. Losing random codes is better than
+  losing consecutive codes for restore.
+- Add `--num-copies`, which adds extra copies of every QR code for redundancy.
 - Added `--instructions` option to pick how to print instructions. Options are
   as a cover sheet, on each page (the default), both, or neither.
 - Added a english explanation of the restore process to the instructions. It's

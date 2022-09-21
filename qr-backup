@@ -59,6 +59,9 @@ Backup options:
     --note TEXT
         Add a special note to the printout instructions. Can be anything.
         Default: no note
+    --num-copies NUMBER
+        Print multiple copies of each QR code for redundancy.
+        Default: 1
     --output FILENAME, -o FILENAME
         Set the output pdf path (redirecting stdout also works).
         Default: <FILE>.qr.pdf
@@ -279,6 +282,8 @@ def shuffle(qrs):
     # Ideally we would feed in the page size, and figure out how to do this optimially.
     # But random is also pretty good, and this way we don't have to figure out the number
     # of QRs per page in advance
+    # Note: if we do the optimal way, avoid problems with losing a page or one corner of
+    # whole stack tearing off. Remember duplex.
     ret = copy.copy(qrs)
     det = random.Random(1)
     det.shuffle(ret)
@@ -617,6 +622,7 @@ def main_backup(args):
     print_passphrase = None
     use_erasure_coding = True
     use_shuffle = None
+    num_copies = 1
 
     # parse arguments
     pargs = []
@@ -683,6 +689,11 @@ def main_backup(args):
             for note_line in note.split("\n"):
                 for line in textwrap.wrap(note_line, width=60, replace_whitespace=False):
                     notes.append(line)
+        elif arg == "--num-copies":
+            if len(args) < 1:
+                show_help("--num-copies requires one argument (integer >= 1)")
+            num_copies, args = int(args[0]), args[1:]
+            assert num_copies >= 1
         elif arg == "--page":
             if len(args) < 2:
                 show_help("--page requires two arguments (decimal page width and height in inches)")
@@ -789,6 +800,9 @@ def main_backup(args):
 
     # Generate QR codes
     code_digits, qr_padding, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale, allowable_loss_fraction=allowable_loss_fraction)
+
+    # Additional copies
+    qrs = qrs * num_copies
 
     # Shuffle order of QR codes
     if use_shuffle:
