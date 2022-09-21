@@ -18,6 +18,8 @@
 - [What other paper backup projects exist?](#what-other-paper-backup-projects-exist)
 - [Can I restore backups made using older versions of qr-backup?](#can-i-restore-backups-made-using-older-versions-of-qr-backup)
 - [My self-test is failing on Ubuntu](#my-self-test-is-failing-on-ubuntu)
+- [What's new in v1.1?](#whats-new-in-v11)
+- [Why does qr-backup restore to stdout? / why doesn't qr-backup extract tar files?](#why-does-qr-backup-restore-to-stdout)
 
 # Answers
 
@@ -91,6 +93,7 @@ The exact commands to run are described in the README and on the printed backup.
 If find this explanation helpful, run qr-backup with the `--instructions both` option to add it to the paper backup.
 
 The backup process:
+- If you're backing up multiple files, everything is combined in a single tar file.
 - A sha256 sum of the original file is printed on the paper.
 - If compression is on, data is compressed using gzip
 - If encryption is on, data is password-protected with GPG in symmetric mode.
@@ -114,6 +117,7 @@ The restore process is
 - This has restored the preprocessed data.
 - If the data was encrypted, it is decrypted with GPG in symmetric mode.
 - If the data was compressed, it's decompressed. The file is now restored.
+- Any tar file is *not* decompressed (to avoid overwriting the original files)
 - The file is checksummed using sha256, which verifies the file is perfectly restored.
 
 ## Should I encrypt (password-protect) my backups?
@@ -182,8 +186,13 @@ Pass CUPS the option 'nopdfAutoRotate'.
 No, but I'll try to support it going forward.
 
 ## How do I back up multiple files?
-1. You can run `qr-backup` multiple times, and print each PDF. If you lose any of the QR codes, you won't be able to restore that file.
-2. OR, you can tar/zip the files, and back up the tar/zip. If you lose any of the QR codes, you won't be able to restore **any** of the files.
+1. **New in v1.1**: Run `qr-backup FILE1 FILE2 FILE3`.
+2. **New in v1.1**: Run `qr-backup DIRECTORY`.
+3. You can tar/zip the files yourself, and back up the tar/zip.
+4. You can run `qr-backup` multiple times, and print each PDF.
+
+In method 1-3, if you lose enough QR codes, you lose *all* the files.
+In method 4, if you lose QR codes, you only lose that file.
 
 ## How does qr-backup compare to OllyDbg's Paperback?
 First, here's what Paperback/Paperbak is:
@@ -228,3 +237,9 @@ The generated PDF is probably fine, but can't be read. Ubuntu has disabled Image
 
 1. Disable or modify the security policy. Check out StackOverflow for information of [why](https://askubuntu.com/questions/1081895/trouble-with-batch-conversion-of-png-to-pdf-using-convert) and [how to disable it](https://askubuntu.com/questions/1127260/imagemagick-convert-not-allowed) if you want.
 2. Test your restore by printing your backup.
+
+## What's new in v1.1?
+Go read the [CHANGELOG](https://github.com/za3k/qr-backup/blob/master/CHANGELOG).
+
+## Why does qr-backup restore to stdout?
+This avoids overwriting up the original files.

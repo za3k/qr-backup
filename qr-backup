@@ -24,9 +24,11 @@ import io
 import logging
 import math
 import os
+import os.path
 import random
 import subprocess
 import sys
+import tarfile
 import tempfile
 import textwrap
 
@@ -554,6 +556,15 @@ def decrypt(content_bytes, passphrase):
     assert result.returncode == 0
     return result.stdout
 
+def create_tar(input_paths):
+    fh = io.BytesIO()
+    tf = tarfile.open(fileobj=fh, mode="w")
+    for input_path in input_paths:
+        tf.add(input_path)
+    tf.close()
+    fh.seek(0)
+    return fh
+
 def show_help(error=None):
     if error:
         print(HELP, file=sys.stderr)
@@ -617,7 +628,7 @@ def generate_label(text, max_width, max_fontsize=24, min_fontsize=4):
             draw.multiline_text((0,-2), text, font=font) # Eurgh, hardcoding an offset.
             return im
         else:
-            logging.info("Reducing label size to {}".format(fontsize))
+            logging.debug("Reducing label size to {}".format(fontsize))
     #assert False
     logging.error("Label cannot fit in the requested width. Forcing output...")
 
@@ -670,6 +681,7 @@ def main_backup(args):
     print_passphrase = None
     use_erasure_coding = True
     use_shuffle = None
+    use_tar = False
     num_copies = 1
     do_checks = True
 
@@ -776,26 +788,54 @@ def main_backup(args):
             show_help()
         else:
             pargs.append(arg)
-    if len(pargs) < 1:
-        show_help("Please supply a filename to backup")
-    elif len(pargs) > 1:
-        show_help("Multiple filenames given. qr-backup can only back up one file at a time")
-    input_path, = pargs
 
-    use_stdout = (output_path is None) and not sys.stdout.isatty()
-    use_stdin = (input_path == "-")
+    # Figure out input paths, output paths, and restore filename
+
+    # Input: stdin, tarfile, or single file?
+    if len(pargs) == 0 and sys.stdin.isatty():
+        show_help("Please supply a filename to backup")
+    elif pargs==["-"] or (len(pargs) == 0 and not sys.stdin.isatty()):
+        use_stdin, use_tar = True, False
+        input_paths = ["-"]
+    elif len(pargs) > 1 or os.path.isdir(pargs[0]):
+        use_stdin, use_tar = False, True
+        input_paths = pargs
+    else:
+        use_stdin, use_tar = False, False
+        input_paths = pargs
+    input_paths = [ip.rstrip("/") for ip in input_paths]
+
+    # Restore filename
     if restore_file is None:
-        input_filename = input_path.split("/")[-1]
+        if len(input_paths) == 1:
+            input_filename = input_paths[0].split("/")[-1]
+        else:
+            input_filename = "file.tar"
+
         if not use_stdin and len(input_filename) <= 32:
             restore_file = input_filename
         else:
             restore_file = "file"
-    if output_path is None:
-        if use_stdin:
-            output_path = f"{restore_file or 'stdin'}.qr.pdf"
-        else:
-            output_path = input_path+".qr.pdf"
 
+    # Output: stdout or single file?
+    if output_path == "-":
+        use_stdout = True
+        output_path = "-"
+    else:
+        use_stdout = (output_path is None or output_path == "-") and not sys.stdout.isatty()
+    if output_path is None:
+        if use_stdout:
+            output_path = "-"
+        elif use_stdin:
+            output_path = f"{restore_file or 'stdin'}.qr.pdf" # Local directory
+        elif len(input_paths) == 1:
+            output_path = f"{input_paths[0]}.qr.pdf" # Same directory
+        elif use_tar:
+            output_path = f"{restore_file}.qr.pdf" # Local directory
+        else:
+            assert False
+
+    # Set more complicated default options
     if use_shuffle is None:
         use_shuffle = use_erasure_coding
 
@@ -810,21 +850,39 @@ def main_backup(args):
     else:
         allowable_loss_fraction = 0
 
-    nice_cmd = ' '.join([x for x in ["qr-backup", "--qr-version", str(qr_version), "--dpi", str(dpi), "--scale", str(scale), "--error-correction", "LMQH"[error_correction], "--page", str(page_w_points), str(page_h_points), '--compress' if use_compression else '--no-compress', "--filename", '--encrypt ???' if use_encryption else None, "--use-erasure-coding" if use_erasure_coding else None, "--shuffle" if use_shuffle else "--no-shuffle", restore_file] if x is not None])
     if GENERATE_DOCS: # example.png should be reproducible
         backup_date = "2021-06-15"
     else:
         backup_date = datetime.date.today().strftime("%Y-%m-%d")
+
+    nice_cmd = ' '.join([x for x in [
+        "qr-backup",
+        "--qr-version", str(qr_version),
+        "--dpi", str(dpi),
+        "--scale", str(scale),
+        "--error-correction", "LMQH"[error_correction],
+        "--page", str(page_w_points), str(page_h_points),
+        '--compress' if use_compression else '--no-compress',
+        "--filename", restore_file,
+        '--encrypt ???' if use_encryption else None,
+        "--use-erasure-coding" if use_erasure_coding else None,
+        "--shuffle" if use_shuffle else "--no-shuffle"
+        "-o", output_path,
+    ] if x is not None])
     logging.info("Original arguments were: {}".format(repr(args)))
     logging.info("Command arguments parsed. Equivalent command: {}".format(nice_cmd))
 
     # ---------------- Argument parsing done --------------
 
     # open the file (or stdin, if "-" is passed as the file)
-    if use_stdin:
+    if use_tar:
+        logging.info("Creating tar file")
+        f = create_tar(input_paths)
+    elif use_stdin:
         f = sys.stdin.buffer
     else:
-        f = open(input_path, "rb")
+        assert len(input_paths) == 1
+        f = open(input_paths[0], "rb")
 
     # read the entire file into memory
     try:
@@ -874,6 +932,7 @@ def main_backup(args):
         restore_cmd += ' | gpg --decrypt'
     if use_compression:
         restore_cmd += ' | gunzip'
+        nice_cmd = nice_cmd
     logging.info(f"Restore command is: {restore_cmd}")
 
     # Instructions depend on the command line options, and the content of the file
@@ -887,7 +946,8 @@ def main_backup(args):
     howto_restore_cmd = restore_cmd.replace("sort -u", "sort -u /tmp/qrs")
     HOWTO += f'\n  Step 2 (restore): {howto_restore_cmd} >{restore_file}'
     HOWTO += f'\n  Step 3 (verify): sha256sum {restore_file} # {sha256sum}, {original_len} bytes'
-    HOWTO += f'\nThis backup was generated on {backup_date} with: {nice_cmd}'
+    nice_doc = f'\nThis backup was generated on {backup_date} with: {nice_cmd}'
+    HOWTO += '\n'.join(textwrap.wrap(nice_doc, subsequent_indent='    ', width=150, replace_whitespace=False))
     if len(notes) > 0:
         HOWTO += "\n" + "\n".join(["Additional note: " + note for note in notes])
 
@@ -922,9 +982,11 @@ def main_backup(args):
     pages[0].save(tmp_pdf, format="pdf", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}", creationDate=backup_date, modDate=backup_date)
 
     if use_stdout:
+        logging.info("Outputting to stdout")
         # Write PDF to stdout
         sys.stdout.buffer.write(tmp_pdf.getbuffer())
     else:
+        logging.info("Outputting: {}".format(output_path))
         # Write PDF to file
         with open(output_path, "wb") as f:
             f.write(tmp_pdf.getbuffer())
@@ -933,11 +995,11 @@ def main_backup(args):
     if do_checks:
         self_test_restore(
             restore_cmd,
-            input_path=input_path,
+            input_path=input_paths[0],
             output_path=output_path,
             output_buffer=tmp_pdf.getbuffer(),
             original_content=original_content,
-            use_buffers=use_stdout or use_stdin,
+            use_buffers=use_tar or use_stdout or use_stdin,
             sha256sum=sha256sum,
             use_encryption=use_encryption,
             encryption_passphrase=encryption_passphrase,
@@ -1336,10 +1398,10 @@ def main_restore(args):
             restore_method = "images"
         elif arg == "--no-compress":
             use_compression = False
-        elif arg == "--no-encrypt":
-            use_encryption = False
         elif arg == "--no-display":
             use_display = False
+        elif arg == "--no-encrypt":
+            use_encryption = False
         elif arg in ["-o", "--output"]:
             if len(args) < 1:
                 show_help("{} requires one argument".format(arg))

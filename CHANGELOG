@@ -14,6 +14,8 @@ v1.1 (not released)
   linux command-line check is performed. Second qr-backup in --restore mode is
   used. Currently the check sometimes fails because zbar is unreliable, so
   failure only prints a warning.
+- Backing up directories and multiple files is supporting using .tar .
+  Tars are output as a single file during restore and not extracted.
 - Added `-o`, `--output` option to give the name of an output file.
 - Add `--shuffle`, `--no-shuffle`. This randomly orders QR codes. It's turned
   on by default is you use erasure coding. Losing random codes is better than
