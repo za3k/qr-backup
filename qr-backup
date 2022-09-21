@@ -1376,6 +1376,8 @@ def main_restore(args):
 
     if output_path is None:
         use_stdout = True
+    if use_stdout and sys.stdout.isatty():
+        logging.fatal("WARNING: Printing file directly to interactive stdout. You probably want to run qr-backup >filename. Press Control-C to exit.")
 
     if use_encryption and not program_present("gpg"):
         show_help("gpg must be installed to use --encrypt. could not find gpg in the PATH")
