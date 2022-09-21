@@ -213,19 +213,27 @@ You will need a computing device and a great deal of technical expertise to rest
   library, but will be the same for each k and n. Use brute-force guessing on good data.
 """
 
-L = qrcode.constants.ERROR_CORRECT_L
-M = qrcode.constants.ERROR_CORRECT_M # default, 25%
-Q = qrcode.constants.ERROR_CORRECT_Q
-H = qrcode.constants.ERROR_CORRECT_H
-QR_MODE = qrcode.util.MODE_8BIT_BYTE # not settable. and no, base64 encoded data doesn't bit in alphanumeric (there are only 44 chars)
 
 # Greyscale is required to work around https://github.com/python-pillow/Pillow/issues/6149
 IMAGE_MODE="L"
 WHITE=255
 BLACK=0
 
+# Zbar and imagemagick constants
 CONVERSION_DENSITY = 600 # pdf to pixel-based format conversion hack
 ZBAR_WARNING_THRESHOLD = 0.9 # do we want to accept that zbar just can't scan the perfect original?
+
+# Erasure coding constants
+DEFAULT_ALLOWABLE_LOSS = 0.3
+ERASURE_SPLIT = 177 # with allowable_loss_fraction=0.3, hits ERASURE_LIMIT of 254. TODO: Have it depend on allowable_loss_fraction instead of assuming DEFAULT_ALLOWABLE_LOSS?
+ERASURE_LIMIT = 254
+
+# QR constants
+L = qrcode.constants.ERROR_CORRECT_L
+M = qrcode.constants.ERROR_CORRECT_M # default, 25%
+Q = qrcode.constants.ERROR_CORRECT_Q
+H = qrcode.constants.ERROR_CORRECT_H
+QR_MODE = qrcode.util.MODE_8BIT_BYTE # not settable. and no, base64 encoded data doesn't bit in alphanumeric (there are only 44 chars)
 
 VERSIONS_BITS = {
     # Binary bits for each version size, 1-40
@@ -272,6 +280,12 @@ VERSIONS_BITS = {
     39: [22496,17728,12656,9776],
     40: [23648,18672,13328,10208],
 }
+
+class QR():
+    def __init__(self, qr, label):
+        self.qr = qr
+        self.label = label
+
 def qr_size_chars(version, mode, quality):
     assert mode not in [qrcode.util.MODE_NUMBER, qrcode.util.MODE_KANJI]
     assert mode in [qrcode.util.MODE_ALPHA_NUM, qrcode.util.MODE_8BIT_BYTE]
@@ -294,6 +308,11 @@ def program_present(program):
     """Return True or False depending on whether the program is found in the environment"""
     return subprocess.call(["which", program], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
 
+def ubuntu_policy_problem():
+    """Tests for Ubuntu's policy of disabling all PDF conversion using ImageMagick"""
+    command = ["grep", "-s", "-q", """'policy domain="coder" rights="none" pattern="PDF"'""", "/etc/ImageMagick-6/policy.xml"]
+    return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+
 def length_encode(data):
     length = len(data)
     prefix = str(length).encode('ascii') + b' ' # encode the length at the start
@@ -315,6 +334,21 @@ def shuffle(qrs):
     det.shuffle(ret)
     return ret
 
+def _calculate_chunk_digits(len_data, chunk_size, allowable_loss_fraction):
+    # Figure out the number of digits in the number of QR codes (which is circular)
+    for chunk_digits in range(1, 10):
+        prefix_normal_format = "N{:0>" + str(chunk_digits) + "}/{:0>" + str(chunk_digits)+"} "
+        prefix_parity_format = "P{:0>" + str(chunk_digits) + "}/{:0>" + str(chunk_digits)+"} "
+        payload_size_base64 = chunk_size - len(prefix_normal_format.format(0,0))
+        payload_size_bytes = math.floor(payload_size_base64 / 4) * 3 # groups of 4 base-64 digits encode 3 bytes each
+        num_qrs = math.ceil(len_data / payload_size_bytes)
+        if num_qrs > 10**chunk_digits-1:
+            continue
+        num_parity_chunks = erasure_count(num_qrs, allowable_loss_fraction)
+        if num_parity_chunks > 10**chunk_digits-1:
+            continue
+        return chunk_digits, payload_size_base64, payload_size_bytes, {b'N':num_qrs, b'P': num_parity_chunks}, {b'N':prefix_normal_format, b'P':prefix_parity_format}
+    assert False
 def generate_chunks(data, chunk_size_base64, do_checks, allowable_loss_fraction=0):
     """
     Return a bunch of chunks to put in QRs.
@@ -325,22 +359,8 @@ def generate_chunks(data, chunk_size_base64, do_checks, allowable_loss_fraction=
     chunk_size_base64: maximum size of each chunk, in QR-safe characters
     """
 
-    # Figure out the number of digits in the number of QR codes (which is circular)
-    binary_parity_chunks = []
-    num_qrs, total_chunks = 0, 0
-    for chunk_digits in range(1, 10):
-        prefix_normal_format = "N{:0>" + str(chunk_digits) + "}/{:0>" + str(chunk_digits)+"} "
-        prefix_parity_format = "P{:0>" + str(chunk_digits) + "}/{:0>" + str(chunk_digits)+"} "
-        payload_size_base64 = chunk_size_base64 - len(prefix_normal_format.format(0,0))
-        payload_size_bytes = math.floor(payload_size_base64 / 4) * 3 # groups of 4 base-64 digits encode 3 bytes each
-        num_qrs = math.ceil(len(data) / payload_size_bytes)
-        if num_qrs > 10**chunk_digits-1:
-            continue
-        num_parity_chunks = erasure_count(num_qrs, allowable_loss_fraction)
-        if num_parity_chunks > 10**chunk_digits-1:
-            continue
-        break
-    assert math.ceil(len(data)/payload_size_bytes) == num_qrs <= 10**chunk_digits-1
+    chunk_digits, payload_size_base64, payload_size_bytes, num_chunks, format_strings = _calculate_chunk_digits(len(data), chunk_size_base64, allowable_loss_fraction)
+    assert math.ceil(len(data)/payload_size_bytes) == num_chunks[b'N'] <= 10**chunk_digits-1
 
     # Pad to even chunk length
     padding_size = -len(data) % payload_size_bytes
@@ -348,26 +368,21 @@ def generate_chunks(data, chunk_size_base64, do_checks, allowable_loss_fraction=
     assert len(data)%payload_size_bytes == 0
 
     # Split into chunks
-    binary_chunks = []
-    for start in range(0, len(data), payload_size_bytes):
-        chunk_data_bytes = data[start:start+payload_size_bytes]
-        binary_chunks.append(chunk_data_bytes)
-    assert all(len(chunk_data_bytes) == payload_size_bytes for chunk_data_bytes in binary_chunks)
-    assert len(binary_chunks) == num_qrs
+    chunks = {}
+    chunks[b'N'] = [data[start:start+payload_size_bytes] for start in range(0, len(data), payload_size_bytes)]
+    assert all(len(chunk_data_bytes) == payload_size_bytes for chunk_data_bytes in chunks[b'N'])
+    assert len(chunks[b'N']) == num_chunks[b'N']
 
     # Generate erasure codes
-    if num_parity_chunks > 0:
-        binary_parity_chunks = generate_erasure(binary_chunks, allowable_loss_fraction, self_test=do_checks)
-        assert num_parity_chunks == len(binary_parity_chunks)
-        assert all(len(chunk_data_bytes) == payload_size_bytes for chunk_data_bytes in binary_parity_chunks)
+    chunks[b'P'] = generate_erasure(chunks[b'N'], allowable_loss_fraction, self_test=do_checks)
+    assert all(len(chunk_data_bytes) == payload_size_bytes for chunk_data_bytes in chunks[b'P'])
+    assert len(chunks[b'P']) == num_chunks[b'P']
 
     # Output the chunks
     ascii_chunks = []
-    for bc, format_string in [
-            (binary_chunks, prefix_normal_format),
-            (binary_parity_chunks, prefix_parity_format)]:
-        for i, chunk_data_bytes in enumerate(bc):
-            prefix = format_string.format(i+1, len(bc)).encode('ascii')
+    for chunk_type in (b'N', b'P'):
+        for i, chunk_data_bytes in enumerate(chunks[chunk_type]):
+            prefix = format_strings[chunk_type].format(i+1, num_chunks[chunk_type]).encode('ascii')
             chunk_data_base64 = base64.b64encode(chunk_data_bytes)
             assert len(chunk_data_base64) <= payload_size_base64
             chunk_content = prefix+chunk_data_base64
@@ -375,14 +390,11 @@ def generate_chunks(data, chunk_size_base64, do_checks, allowable_loss_fraction=
             label = prefix.decode('ascii').split("/")[0]
             ascii_chunks.append((chunk_content, label))
 
-    assert len(ascii_chunks) == num_qrs + num_parity_chunks
+    assert len(ascii_chunks) == sum(num_chunks.values())
     assert all(len(chunk) <= chunk_size_base64 for chunk, label in ascii_chunks)
 
     return chunk_digits, ascii_chunks
 
-DEFAULT_ALLOWABLE_LOSS = 0.3
-ERASURE_SPLIT = 177 # with allowable_loss_fraction=0.3, hits ERASURE_LIMIT of 254. TODO: Have it depend on allowable_loss_fraction instead of assuming DEFAULT_ALLOWABLE_LOSS?
-ERASURE_LIMIT = 254
 def erasure_count(num_normal_pieces, allowable_loss_fraction):
     if allowable_loss_fraction == 0:
         return 0
@@ -404,6 +416,8 @@ def generate_erasure(binary_chunks, allowable_loss_fraction, self_test=True):
     k = len(binary_chunks)
     n = len(binary_chunks)+erasure_count
     """
+    if allowable_loss_fraction == 0:
+        return []
     num_erasures = erasure_count(len(binary_chunks), allowable_loss_fraction)
     chunk_size = len(binary_chunks[0])
     assert all(len(chunk) == chunk_size for chunk in binary_chunks)
@@ -489,11 +503,6 @@ def restore_erasure(normal_codes, erasure_codes, allowable_loss_fraction):
         assert len(simple_restore) == len(normal_codes)*chunk_size
         return simple_restore
 
-class QR():
-    def __init__(self, qr, label):
-        self.qr = qr
-        self.label = label
-
 def qr_codes(data, error_correction, version, scale, do_checks, allowable_loss_fraction=0):
     naive_chunk_size = qr_size_chars(version, QR_MODE, error_correction)
     chunk_digits, chunks = generate_chunks(data, naive_chunk_size, do_checks=do_checks, allowable_loss_fraction=allowable_loss_fraction)
@@ -538,11 +547,6 @@ def show_help(error=None):
     else:
         print(HELP)
         sys.exit(0)
-
-def ubuntu_policy_problem():
-    """Tests for Ubuntu's policy of disabling all PDF conversion using ImageMagick"""
-    command = ["grep", "-s", "-q", """'policy domain="coder" rights="none" pattern="PDF"'""", "/etc/ImageMagick-6/policy.xml"]
-    return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
 
 def add_label(image, text, side="bottom", max_fontsize=24, max_width=None, label=None):
     """
@@ -1195,6 +1199,26 @@ def do_restore(codes, totals, use_erasure, use_compression, use_encryption, encr
 
     return content
 
+def content_matches_checksum(content, expected_sha256sum):
+    sha256sum = hashlib.sha256(content).hexdigest()
+    return checksum_matches(sha256sum, expected_sha256sum)
+def checksum_matches(sha256sum, expected_sha256sum):
+    logging.info("restored sha256sum: {}".format(sha256sum))
+    if expected_sha256sum is None:
+        logging.debug("no expected sha256sum was given")
+        print(f"sha256sum was as follows, please check against your paper backup: {sha256sum}", file=sys.stderr)
+    elif expected_sha256sum == sha256sum:
+        logging.debug("sha256sum matched")
+        #print("File verified using sha256 checksum.", file=sys.stderr)
+    elif sha256sum.startswith(expected_sha256sum):
+        logging.debug("sha256sum partial matched")
+        print(f"The actual sha256sum begins with checksum given on the command line, but it was not complete. The full checksum was: {sha256sum}", file=sys.stderr)
+    else:
+        logging.error("sha256sum did not match")
+        print(f"!!The restored file does NOT match the expected checksum. Restoring anyway.", file=sys.stderr)
+        return False
+    return True
+
 def main_restore(args):
     # Default config
     restore_method = None # Should be one of: None, "webcam", "images"
@@ -1371,22 +1395,10 @@ def main_restore(args):
         pass
 
     # Check the checksum
-    sha256sum = hashlib.sha256(content).hexdigest()
-    exit_status = 0
-    logging.info("restored sha256sum: {}".format(sha256sum))
-    if expected_sha256sum is None:
-        logging.debug("no expected sha256sum was given")
-        print(f"sha256sum was as follows, please check against your paper backup: {sha256sum}", file=sys.stderr)
-    elif expected_sha256sum == sha256sum:
-        logging.debug("sha256sum matched")
-        #print("File verified using sha256 checksum.", file=sys.stderr)
-    elif sha256sum.startswith(expected_sha256sum):
-        logging.debug("sha256sum partial matched")
-        print(f"The actual sha256sum begins with checksum given on the command line, but it was not complete. The full checksum was: {sha256sum}", file=sys.stderr)
+    if content_matches_checksum(content, expected_sha256sum):
+        exit_status = 0
     else:
-        logging.error("sha256sum did not match")
         exit_status = 4
-        print(f"!!The restored file does NOT match the expected checksum. Restoring anyway.", file=sys.stderr)
 
     # Write the output
     if use_stdout:
@@ -1394,6 +1406,7 @@ def main_restore(args):
     else:
         with open(output_path, "wb") as f:
             f.write(content)
+
     sys.exit(exit_status)
 
 if __name__ == "__main__":
