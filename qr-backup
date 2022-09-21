@@ -9,10 +9,27 @@ Requirements to restore from the PDF, no erasure coding:   zbar, imagemagick (te
                                       with erasure coding: zbar, imagemagick (temporary), qrcode, reedsolo
 """
 import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageOps
-import english_wordlist
-import atexit, base64, copy, datetime, gzip, hashlib, io, logging, math, os, random, subprocess, sys, tempfile, textwrap
-import reedsolo
 import qrcode
+import reedsolo
+
+import english_wordlist
+
+import atexit
+import base64
+import copy
+import datetime
+import gzip
+import hashlib
+import io
+import logging
+import math
+import os
+import random
+import subprocess
+import sys
+import tempfile
+import textwrap
+
 assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removing f-strings to fix it, sucka!"
 
 HELP='''Usage: qr-codes.py [OPTIONS] FILE
