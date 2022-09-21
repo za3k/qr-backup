@@ -1173,7 +1173,7 @@ def webcam_restore(use_display):
             line = proc.stdout.readline()
             if line == b'':
                 return
-            if (yield line.strip()):
+            if (yield line.strip()): # Exit early on request
                 return
 
 def expected_codes_type(_, counts, code_type): # Returns a list of binary strings
@@ -1207,7 +1207,7 @@ def restore_status(codes, counts, use_erasure=None):
     else:
         expected = expected_codes(codes, counts, use_erasure=use_erasure)
         missing = [x.decode('ascii') for x in expected if x not in codes]
-        return f"Missing {len(missing)}/{len(expected)} codes: " + ' '.join(x[1:] for x in missing[:5]) + (" ..." if len(missing) > 5 else "")
+        return f"Missing {len(missing)}/{len(expected)} codes: " + ' '.join(x for x in missing[:5]) + (" ..." if len(missing) > 5 else "")
 
 def is_complete(codes, totals, extra_wanted=0, use_erasure=None):
     # TODO: Logic is wrong for >256 block codes.
@@ -1216,7 +1216,7 @@ def is_complete(codes, totals, extra_wanted=0, use_erasure=None):
     if totals[b'N'] is None:
         return False
     logging.info("{}/{}? complete".format(len(codes), totals[b'N']))
-    return len(codes) > totals[b'N'] + extra_wanted
+    return len(codes) >= totals[b'N'] + extra_wanted
 
 def do_restore(codes, totals, use_erasure, use_compression, use_encryption, encryption_passphrase):
     assert is_complete(codes, totals, use_erasure=use_erasure)
@@ -1447,8 +1447,9 @@ def main_restore(args):
 
     # Close subprocess
     try:
+        logging.info("Closing")
         # TODO: Sometimes one extra code needs to be read before it closes, fix that.
-        next(restore_generator, True)
+        restore_generator.send(True)
     except StopIteration:
         pass
 
