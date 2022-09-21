@@ -1,6 +1,6 @@
 # Questions
-- [What are the advantages of paper backups?](#what-are-the-advantages-of-paper-backups)
 - [How much data does this back up per page / why don't you back up more data per page?](#how-much-data-does-this-back-up-per-page)
+- [What are the advantages of paper backups?](#what-are-the-advantages-of-paper-backups)
 - [How do I back up more data per page?](#how-do-i-back-up-more-data-per-page)
 - [How much of my backup can I lose and still restore?](#how-much-of-my-backup-can-i-lose-and-still-restore)
 - [Do you support Windows / why don't you support Windows?](#why-dont-you-support-windows)
@@ -20,6 +20,20 @@
 
 # Answers
 
+## How much data does this back up per page?
+
+qr-backup on *default* settings backs up at 3-4KB/page raw data (about 15KB/page english text).
+
+At max settings, it backs up at 130KB/page raw (or 170KB/page raw with erasure coding disabled). I recommend against these settings. Your restore will fail unless you have an incredibly good scanner, and maybe even then.
+
+If you just want maximum density, have a high-quality printer and scanner, and don't care about convenience, you should try [another program](#what-other-paper-backup-projects-exist). Density-focused ones claim 100-300KB/page. 
+
+Overall, qr-backup is focused on successful, easy restores. It's not focused on maximum density.
+
+The basic answer to "why isn't qr-backup's density higher" is that webcams suck, and qr-backup's default settings are meant to work for everyone. If you print a denser backup, some computers won't be able to restore it via webcam.
+
+That said, if you only want to support your own webcam/scanner, you're welcome to try and [handle more](#how-do-i-back-up-more-data-per-page).
+
 ## What are the advantages of paper backups?
 - It's easy to think about physical stuff. Everyone can understand whether they still have a backup (by looking), whether it's damaged (by looking), and who can access their backup.
 - Paper can't be hacked. It's easy to think about who can access a paper backup compared to an online computer. Paper backups are a popular option to store GPG keys, SSH keys, crypto wallets, or encrypted messages for this reason.
@@ -27,11 +41,6 @@
 - Paper lasts a long time. CDs and flash-based storage (USB drives, SD cards, and many modern hard drives) usually stop working within 10 years. Magnetic storage works for a fairly long time unless it is damaged.
 - Paper has no parts that can break. It's common for hard drives to break, and for the data inside to become unreadable, even though the data is still okay.
 - Damage is visible. Sometimes a flash drive can be silently corrupted, or a drive's parts will break, but it looks OK. You can look at paper and whether it's damaged, and how much damage there is.
-
-## How much data does this back up per page?
-qr-backup on default settings (but with compression disabled) backs up about 3KB data/page. This is about the same as written text in a small font--maybe not as good. Compression improves that to 15KB english text/page for my test data.
-
-I picked these settings by experimenting with the restore process on my computer. If I use a higher data rate, zbarcam can't consistently recognize the QR codes using my laptop webcam.  That said, you're welcome to see if your computer can [handle more](#how-do-i-back-up-more-data-per-page).
 
 ## How do I back up more data per page?
 Sure, maybe you have a better webcam/scanner than I do, in which case you can increase settings, and the only cost if that people with bad webcams like me can't restore. Once you hit your webcam's limit, you can still shove more data in, but there will be cost tradeoffs as you lose reliability.
