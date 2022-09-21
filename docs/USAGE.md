@@ -40,7 +40,7 @@ Backup options:
     --instructions page|cover|both|none
         Sets how frequently the instructions are printed. If 'cover' or 'both'
         is selected, more verbose instructions will be printed on the cover
-        page. 
+        page.
         Default: page
     --note TEXT
         Add a special note to the printout instructions. Can be anything.
@@ -60,7 +60,7 @@ Backup options:
         the version, the harder to scan but the more data per code.
         Default: 10
     --scale SCALE
-        Scale QR codes so that each small square in the QR code is 
+        Scale QR codes so that each small square in the QR code is
         SCALE x SCALE pixels.
         Default: 5px
     --shuffle, --no-shuffle

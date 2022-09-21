@@ -97,6 +97,9 @@ Backup options:
     --shuffle, --no-shuffle
         Spread QR codes across pages. This can help prevent data loss.
         Default: yes if erasure coding is enabled (default), no otherwise
+    --skip-checks, --no-skip-checks
+        Skip erasure code checks, self-restore checks.
+        Default: not skipped
 
 Restore options:
     --code-count-erasure COUNT, -c COUNT
@@ -312,7 +315,7 @@ def shuffle(qrs):
     det.shuffle(ret)
     return ret
 
-def generate_chunks(data, chunk_size_base64, allowable_loss_fraction=0):
+def generate_chunks(data, chunk_size_base64, do_checks, allowable_loss_fraction=0):
     """
     Return a bunch of chunks to put in QRs.
     The returned values must not contain "\n" due to the use of zbarimg/zbarcam, so we base-64 encode everything at the QR level
@@ -354,7 +357,7 @@ def generate_chunks(data, chunk_size_base64, allowable_loss_fraction=0):
 
     # Generate erasure codes
     if num_parity_chunks > 0:
-        binary_parity_chunks = generate_erasure(binary_chunks, allowable_loss_fraction)
+        binary_parity_chunks = generate_erasure(binary_chunks, allowable_loss_fraction, self_test=do_checks)
         assert num_parity_chunks == len(binary_parity_chunks)
         assert all(len(chunk_data_bytes) == payload_size_bytes for chunk_data_bytes in binary_parity_chunks)
 
@@ -491,9 +494,9 @@ class QR():
         self.qr = qr
         self.label = label
 
-def qr_codes(data, error_correction, version, scale, allowable_loss_fraction=0):
+def qr_codes(data, error_correction, version, scale, do_checks, allowable_loss_fraction=0):
     naive_chunk_size = qr_size_chars(version, QR_MODE, error_correction)
-    chunk_digits, chunks = generate_chunks(data, naive_chunk_size, allowable_loss_fraction)
+    chunk_digits, chunks = generate_chunks(data, naive_chunk_size, do_checks=do_checks, allowable_loss_fraction=allowable_loss_fraction)
 
     qrs = []
     for data, label in chunks:
@@ -648,6 +651,7 @@ def main_backup(args):
     use_erasure_coding = True
     use_shuffle = None
     num_copies = 1
+    do_checks = True
 
     # parse arguments
     pargs = []
@@ -707,6 +711,8 @@ def main_backup(args):
             use_erasure_coding = False
         elif arg == "--no-shuffle":
             use_shuffle = False
+        elif arg == "--no-skip-checks":
+            do_checks = True
         elif arg == "--note":
             if len(args) < 1:
                 show_help("--note requires one argument")
@@ -735,6 +741,8 @@ def main_backup(args):
             if len(args) == 0:
                 show_help("--scale requires one argument (integer scale in pixels)")
             scale, args = int(args[0]), args[1:]
+        elif arg == "--skip-checks":
+            do_checks = False
         elif arg == "--shuffle":
             use_shuffle = True
         elif arg in ["-v", "--verbose"]:
@@ -824,7 +832,7 @@ def main_backup(args):
     content, range_ = length_encode(content)
 
     # Generate QR codes
-    code_digits, qr_padding, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale, allowable_loss_fraction=allowable_loss_fraction)
+    code_digits, qr_padding, qrs = qr_codes(content, error_correction=error_correction, version=qr_version, scale=scale, do_checks=do_checks, allowable_loss_fraction=allowable_loss_fraction)
 
     # Additional copies
     qrs = qrs * num_copies
@@ -986,6 +994,8 @@ def main_backup(args):
         logging.warning("Skipping digital restore verification, because 'convert' is not available. convert is needed to work around a bug in zbarimg.")
     elif ubuntu_policy_problem():
         logging.warning("Skipping digital restore verification, because 'convert' is not available. Ubuntu forbids PDF conversion using imagemagick. More information at: https://github.com/za3k/qr-backup/tree/master/docs")
+    elif not do_checks:
+        logging.info("Skipping checks (--skip-checks passed).")
     else:
         if use_stdout or use_stdin:
             logging.info("Performing linux CLI restore check...")
