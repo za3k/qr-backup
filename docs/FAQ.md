@@ -24,18 +24,17 @@
 # Answers
 
 ## How much data does this back up per page?
-
 qr-backup on *default* settings backs up at 3-4KB/page raw data (about 15KB/page english text).
 
 At max settings, it backs up at 130KB/page raw (or 170KB/page raw with erasure coding disabled). I recommend against these settings. Your restore will fail unless you have an incredibly good scanner, and maybe even then.
 
-If you just want maximum density, have a high-quality printer and scanner, and don't care about convenience, you should try [another program](#what-other-paper-backup-projects-exist). Density-focused ones claim 100-300KB/page. 
-
 Overall, qr-backup is focused on successful, easy restores. It's not focused on maximum density.
 
-The basic answer to "why isn't qr-backup's density higher" is that webcams suck, and qr-backup's default settings are meant to work for everyone. If you print a denser backup, some computers won't be able to restore it via webcam.
+The basic answer to "why isn't qr-backup's density higher" is that a webcam's resolution is lower than a printer's resolution. qr-backup's default settings are meant to work for everyone. If you print a denser backup, some computers won't be able to restore it via webcam.
 
-That said, if you only want to support your own webcam/scanner, you're welcome to try and [handle more](#how-do-i-back-up-more-data-per-page).
+That said, if you only want to support your own webcam/scanner, you're welcome to try and [increase your data density](#how-do-i-back-up-more-data-per-page).
+
+You can also try [another program](#what-other-paper-backup-projects-exist). Density-focused ones claim 100-300KB/page. 
 
 ## What are the advantages of paper backups?
 - It's easy to think about physical stuff. Everyone can understand whether they still have a backup (by looking), whether it's damaged (by looking), and who can access their backup.
@@ -46,25 +45,26 @@ That said, if you only want to support your own webcam/scanner, you're welcome t
 - Damage is visible. Sometimes a flash drive can be silently corrupted, or a drive's parts will break, but it looks OK. You can look at paper and whether it's damaged, and how much damage there is.
 
 ## How do I back up more data per page?
-Sure, maybe you have a better webcam/scanner than I do, in which case you can increase settings, and the only cost if that people with bad webcams like me can't restore. Once you hit your webcam's limit, you can still shove more data in, but there will be cost tradeoffs as you lose reliability.
+Maybe you have a better webcam/scanner than I do, in which case you can increase settings. The only cost if that people with bad webcams like me can't restore your backup. Once you hit your webcam/scanner's limit, you can still shove more data in, but there will be cost tradeoffs as you lose reliability.
 
-Before changing the QR size and scale, test your restore! Looking OK to your eyes is not enough. I tried making the default settings more aggressive, but I actually can't scan smaller QR codes on my laptop webcam.
+Before committing to a QR size and scale, test your restore with an actual webcam or scanner! Looking OK to your eyes is not enough.
+
+Try these, from most effective to least:
 
 - Print double-sided
 - Print smaller. Reduce the scale with `--scale <scale>` (default 8, min 1).
 - Use higher-data QR codes with `--qr-version <version>` (default 10, max 40). Bigger codes doesn't always mean more data, because bigger codes don't always fit on the page. Pass `-v` to see how many KB/page you're getting. 
 - Reduce error correction using `--error-correction L`. This makes your backup more sensitive to things like paper folds and dirt.
 - [Maximize](#how-do-i-find-the-maximum-dimensions-of-my-printer) your page size
-- Turn off erasure coding with `--no-erasure-coding`. This means losing a single QR code will hose your data. I strongly recommend against.
 - Test and restore using a high-quality scanner, not a webcam.
-- Use a [different paper backup program](#what-other-paper-backup-projects-exist). Ultimately, this is designed to make restores easy, not to pack data in as densely as posible.
+- (Last resort) Turn off erasure coding with `--no-erasure-coding`. This means losing a single QR code will hose your data.
 
-The absolute max qr-backup allows is about 200KB/page at `--scale 1`, but you'll never be able to read something that small in practice.
+You can also use a [different paper backup program](#what-other-paper-backup-projects-exist). Ultimately, qr-backup is designed to make restores easy, not to pack data in as densely as posible.
 
 ## How much of my backup can I lose and still restore?
 Depends whether you have qr-backup when you're doing the restore.
 
-**New in v1.1**: If you restore using qr-backup, you can lose up any 30% of the pages or QR codes, no more. The technology used is called erasure coding. It's the same thing that lets you read a damaged CD, a bit flip in ECC RAM, or a damaged zraid volume.
+**New in v1.1**: If you restore using qr-backup, you can lose roughly 30% of the pages or QR codes, no more. The technology used is called erasure coding. It's the same thing that lets you read a damaged CD, a bit flip in ECC RAM, or a damaged zraid volume.
 
 If you don't have qr-backup, it's more fragile. If you lose one page, or even one QR code (like if it's torn off or you spill grape juice), you're hosed. You won't be able to restore. If some dirt, a pen mark, etc gets on a QR code, you'll be fine.
 
@@ -72,6 +72,7 @@ There are some command-line options that reduce the damage:
 
 - `--num-copies` prints duplicates of QR codes. If you're printing duplicates, I recommend three copies (rather arbitrarily).
 - `--no-compress` disables compression. This makes the backup longer, but it means that if you have 50% of the data, you can recover 50% of the file. For some backup types (text documents) this is useful. For others (bitcoin wallets) it is not.
+- `--shuffle`, which is on by default, randomly re-orders codes. This helps if you are restoring with QR-backup. Erasure codes can only cover up to 256 QRs, so large files (>20KB) are split into sets of codes. If you lose 30% of codes from one set, you lose data. To combat this, qr-backup orders codes randomly by default, so you're unlikely to lose many codes from the same set.
 
 ## Why don't you support windows?
 I might someday, I just haven't done it yet.
@@ -102,6 +103,7 @@ The backup process:
 - The data is now preprocessed.
 - The data is split into small chunks, about 2K each with the default settings.
 - We use erasure coding to generate redundant "parity chunks" from the normal chunks. This adds 42% more chunks.
+- The QR codes are re-order randomly, to help prevent certain kinds of data loss.
 - Each chunk is base64 encoded.
 - Labels are added. If there are 50 chunks, the first is labeled "N01/50" and the last is "N50/50". Parity chunks are labeled "P01/21" through "P21/21".
 - Each chunk is printed as a QR code on the paper, and labeled with the same code label.
@@ -202,9 +204,9 @@ First, here's what Paperback/Paperbak is:
 
 Here's how they are similar/different
 - Both have the same essential goal and flow: back some stuff up to paper and restore it later.
-- Paperbak is Windows-only; qr-backup runs on Linux CLI and probably mac CLI.
+- Paperbak is Windows-only; qr-backup runs on Linux command-line.
 - Paperbak is focused around shoving the most data on paper possible (with some nice extras). qr-backup is focused on easy restore that actually works (with some nice extras).
-- I'm not super clear if Paperback actually/still works end to end (haven't tested it firsthand, because no Windows). I'll check if I can get cyphar to work on Linux. It would definitely be a good second tool, I'd probably use both.
+- I'm not super clear if Paperback actually/still works end to end (haven't tested it firsthand, because no Windows).
 - Paperbak is designed to want a high-quality scanner (3x print dpi). qr-backup can use a webcam, sucky scanner, or whatever else that can read QR codes with a little hacking.
 - At a best estimate, with default settings, Paperbak stores 300KB/page, and qr-backup stores 3KB/page. Most of this is Paperbak requiring a good scanner, and qr-backup requiring an average webcam. QR, zbar, and qr-backup inefficiencies also contribute some.
 - Paperbak uses a proprietary format, and needs Paperbak to restore. qr-backup uses an esoteric mix of existing formats like QR and gzip, and can be restored with a bash oneliner of standard linux tools.
@@ -213,6 +215,7 @@ Here's how they are similar/different
 - Both support encryption.
 - qr-backup prints a bunch of human-readable info on the page explaining what it is and how to restore. Paperbak optionally prints a little of this (mostly the file name, size, and date)
 - Both are black-and-white only
+- qr-backup has both library and CLI dependencies (zbar, convert). Paperbak has only library dependencies.
 - qr-backup is designed to someday work as an easy app on phones. It wouldn't be possible or useful to do this with paperbak, because it requires a scanner.
 - qr-backup is maintained (well, as of writing this FAQ answer, at least!)
 
@@ -232,7 +235,6 @@ Dense pixel grid (like Paperbak). Everything in this section needs a good scanne
 - [optar](http://ronja.twibright.com/optar/): Black and white. Uses Golay codes.
 
 ## My self-test is failing on Ubuntu
-
 The generated PDF is probably fine, but can't be read. Ubuntu has disabled ImageMagick working on PDFs for security reasons. This breaks qr-backup's self-test process. You have two options.
 
 1. Disable or modify the security policy. Check out StackOverflow for information of [why](https://askubuntu.com/questions/1081895/trouble-with-batch-conversion-of-png-to-pdf-using-convert) and [how to disable it](https://askubuntu.com/questions/1127260/imagemagick-convert-not-allowed) if you want.
