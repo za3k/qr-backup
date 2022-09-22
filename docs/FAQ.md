@@ -20,6 +20,7 @@
 - [My self-test is failing on Ubuntu](#my-self-test-is-failing-on-ubuntu)
 - [What's new in v1.1?](#whats-new-in-v11)
 - [Why does qr-backup restore to stdout? / why doesn't qr-backup extract tar files?](#why-does-qr-backup-restore-to-stdout)
+- [What license is qr-backup released under?](#what-license-is-qr-backup-released-under)
 
 # Answers
 
@@ -245,3 +246,6 @@ Go read the [CHANGELOG](https://github.com/za3k/qr-backup/blob/master/CHANGELOG)
 
 ## Why does qr-backup restore to stdout?
 This avoids overwriting up the original files.
+
+## What license is qr-backup released under?
+I release qr-backup into the public domain. I release qr-backup under [CC0](https://creativecommons.org/share-your-work/public-domain/cc0/)
