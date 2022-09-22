@@ -7,12 +7,14 @@ Usage: qr-codes.py [OPTIONS] FILE
 Convert a binary file to a paper .pdf backup of QR codes. With '--restore', read
 the QR codes in the paper backup using a webcam or scanner, to re-create the
 original file.
+
 Restore directions are included in the PDF, and do not require qr-backup. Make
 sure to test that you can actually read the QR size you select.
+
 Backup options:
     --dpi DPI
         Sets the print resolution of your printer.
-        Default: 600
+        Default: 300
     --compress, --no-compress
         This gives a more compact backup, but partial recovery is impossible.
         Default: compressed
@@ -67,6 +69,7 @@ Backup options:
     --skip-checks, --no-skip-checks
         Skip erasure code checks, self-restore checks.
         Default: not skipped
+
 Restore options:
     --code-count-erasure COUNT, -c COUNT
         Specify the number of erasure QR codes.
@@ -95,7 +98,9 @@ Restore options:
     --webcam-restore
         Force webcam-based restore.
         Default: automatic
+
 Options for both:
     --verbose, -v
         Print more detailed information during run
+
 ```

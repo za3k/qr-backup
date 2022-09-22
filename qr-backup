@@ -44,7 +44,7 @@ Restore directions are included in the PDF, and do not require qr-backup. Make s
 Backup options:
     --dpi DPI
         Sets the print resolution of your printer.
-        Default: 600
+        Default: 300
     --compress, --no-compress
         This gives a more compact backup, but partial recovery is impossible.
         Default: compressed
@@ -127,6 +127,9 @@ Options for both:
 def wrap_keeping_indent(text, width):
     lines = []
     for line in text.split("\n"):
+        if line.strip() == '':
+            lines.append("")
+            continue
         orig_line = line
         new_line = line.lstrip(' ')
         indent = ' '*(len(orig_line)-len(new_line))
@@ -545,13 +548,25 @@ def generate_passphrase():
 # I took a look at the python 'gnupg' library... it doesn't support bytes, and it isn't really designed to do symmetric encryption/decryption either.
 def encrypt(content_bytes, passphrase, armor=False, cipher="AES256"):
     # I chose to hardcode an encryption cipher, to make documenting the restore easier. This does make it harder to futureproof, and some people may distrust AES already.
-    result = subprocess.run(["gpg", "--symmetric", "--no-symkey-cache", "--passphrase", passphrase, "--batch", "--cipher-algo"] + (["--armor"] if armor else []), capture_output=True, input=content_bytes)
-    assert result.returncode == 0
+    command = ["gpg", "--symmetric", "--no-symkey-cache", "--passphrase", passphrase, "--batch", "--cipher-algo", cipher] + (["--armor"] if armor else [])
+    result = subprocess.run(command, capture_output=True, input=content_bytes)
+    if result.returncode != 0:
+        logging.info("gpg command: {}".format(" ".join(command)))
+        logging.fatal("[gpg stdout] {}".format(result.stdout))
+        logging.fatal("[gpg stderr] {}".format(result.stderr))
+        logging.fatal("[gpg exit] {}".format(result.returncode))
+        sys.exit(4)
     return result.stdout
 
 def decrypt(content_bytes, passphrase):
-    result = subprocess.run(["gpg", "--decrypt", "--no-symkey-cache", "--passphrase", passphrase, "--batch"], capture_output=True, input=content_bytes)
-    assert result.returncode == 0
+    command = ["gpg", "--decrypt", "--no-symkey-cache", "--passphrase", passphrase, "--batch"]
+    result = subprocess.run(command, capture_output=True, input=content_bytes)
+    if result.returncode != 0:
+        logging.info("gpg command: {}".format(" ".join(command)))
+        logging.error("[gpg stdout] {}".format(result.stdout))
+        logging.error("[gpg stderr] {}".format(result.stderr))
+        logging.fatal("[gpg exit] {}".format(result.returncode))
+        sys.exit(4)
     return result.stdout
 
 def create_tar(input_paths):
@@ -631,7 +646,7 @@ def generate_label(text, max_width, max_fontsize=24, min_fontsize=4):
     logging.error("Label cannot fit in the requested width. Forcing output...")
 
     font = PIL.ImageFont.truetype("DejaVuSans.ttf", min_fontsize)
-    width, height = test_draw.multiline_textsize(text, font=font)
+    _, _, width, height = test_draw.multiline_textbbox((0, 0), text, font=font)
     height += 4
     im = PIL.Image.new(mode=IMAGE_MODE, size=(max_width, height), color=WHITE) # black-and-white
     draw = PIL.ImageDraw.Draw(im)
@@ -705,6 +720,8 @@ def main_backup(args):
                 args = args[1:]
             else:
                 encryption_passphrase, args = args[0], args[1:]
+        elif arg == "--encrypt-print-passphrase":
+            print_passphrase = True
         elif arg == "--erasure-coding":
             use_erasure_coding = True
         elif arg == "--error-correction":
@@ -760,6 +777,12 @@ def main_backup(args):
             if len(args) < 2:
                 show_help("--page requires two arguments (decimal page width and height in inches)")
             page_w_points, page_h_points, args = float(args[0]), float(args[1]), args[2:]
+            # passing in 500 and 500.0 should not change the output.
+            # this prevents string formatting from changing in nice_cmd
+            if page_w_points == math.floor(page_w_points):
+                page_w_points = int(page_w_points)
+            if page_h_points == math.floor(page_h_points):
+                page_h_points = int(page_h_points)
         elif arg in ["-o", "--output"]:
             if len(args) < 1:
                 show_help("{} requires one argument".format(arg))
@@ -958,12 +981,18 @@ def main_backup(args):
     if len(notes) > 0:
         HOWTO += "\n" + "\n".join(["Additional note: " + note for note in notes])
 
+    # Print encyrption passphrase
+    if encryption_passphrase is None:
+        passphrase_instructions = None
+    else:
+        passphrase_instructions = "File: {}\nDate: {}\nYour secret passphrase is: {}\n\nMake sure to hide this sheet somewhere secure, not with your backup!".format(restore_file, backup_date, encryption_passphrase)
+
     cover_txt = COVER.format(
         backup_date=backup_date,
         restore_file=restore_file,
         original_len=original_len,
         sha256sum=sha256sum,
-        nice_cmd=nice_cmd,
+        nice_cmd='\n'.join(textwrap.wrap(nice_cmd, subsequent_indent='    ', width=130, replace_whitespace=False)),
         notes="\n".join(["Additional note: " + note for note in notes])+"\n" if len(notes) > 0 else "",
         code_end=code_digits+1,
         howto_restore_cmd=howto_restore_cmd,
@@ -977,7 +1006,7 @@ def main_backup(args):
         qr_padding = qr_padding,
         page_instructions=HOWTO if add_page_instructions else None,
         cover_instructions=cover_txt if add_cover_instructions else None,
-        encryption_passphrase=encrytion_passphrase if print_passphrase else None,
+        passphrase_instructions=passphrase_instructions,
         minimize_size=GENERATE_DOCS,
         _qr_version=qr_version, # logging only
         _original_len=original_len, # logging only
@@ -1019,7 +1048,7 @@ def main_backup(args):
     if GENERATE_DOCS:
         generate_docs(pages)
 
-def generate_pdf(qrs, dpi, page_w_points, page_h_points, page_instructions, cover_instructions, qr_padding, encryption_passphrase, minimize_size, _qr_version, _len_content, _original_len):
+def generate_pdf(qrs, dpi, page_w_points, page_h_points, page_instructions, cover_instructions, qr_padding, passphrase_instructions, minimize_size, _qr_version, _len_content, _original_len):
     # Calculate QR padding produced by qrcode module
     example_qr = qrs[0].qr.make_image().copy()
     qr_raw_w_pixel, qr_raw_h_pixel = example_qr.size
@@ -1076,11 +1105,11 @@ def generate_pdf(qrs, dpi, page_w_points, page_h_points, page_instructions, cove
 
     # Use imagemagick to make one png file per page-side
     unnumbered_images = []
-    if encryption_passphrase is not None:
-        passphrase_image = generate_label("File: {}\nDate: {}\nYour secret passphrase is: {}\n\nMake sure to hide this sheet somewhere secure, not with your backup!".format(restore_file, backup_date, encryption_passphrase), max_width=page_w_pixel-2)
+    if passphrase_instructions is not None:
+        passphrase_image = generate_label(passphrase_instructions, max_width=page_w_pixel-2)
         unnumbered_images.append((False, passphrase_image))
     if cover_instructions:
-        cover_img = generate_label(cover_instructions, page_w_pixel, max_fontsize=24, min_fontsize=24)
+        cover_img = generate_label(cover_instructions, page_w_pixel-2, max_fontsize=24, min_fontsize=24)
         assert cover_img.size[0] <= page_w_pixel - 2
         unnumbered_images.append((True, cover_img))
     for page_start in range(0, len(rows), page_h_qr):
