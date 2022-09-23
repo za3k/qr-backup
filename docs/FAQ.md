@@ -209,7 +209,7 @@ Here's how they are similar/different
 - Paperbak is focused around shoving the most data on paper possible (with some nice extras). qr-backup is focused on easy restore that actually works (with some nice extras).
 - I'm not super clear if Paperback actually/still works end to end (haven't tested it firsthand, because no Windows).
 - Paperbak is designed to want a high-quality scanner (3x print dpi). qr-backup can use a webcam, sucky scanner, or whatever else that can read QR codes with a little hacking.
-- At a best estimate, with default settings, Paperbak stores 300KB/page, and qr-backup stores 3KB/page. Most of this is Paperbak requiring a good scanner, and qr-backup requiring an average webcam. QR, zbar, and qr-backup inefficiencies also contribute some.
+- At a best estimate, with default settings, Paperbak stores 300KB/page, and qr-backup stores [3KB/page](#how-much-data-does-this-back-up-per-page). Most of this is Paperbak requiring a good scanner, and qr-backup requiring an average webcam. QR, zbar, and qr-backup inefficiencies also contribute some.
 - Paperbak uses a proprietary format, and needs Paperbak to restore. qr-backup uses an esoteric mix of existing formats like QR and gzip, and can be restored with a bash oneliner of standard linux tools.
 - Both support reed-solomon coding, so you can lose part of the page(s) and still restore. Both require the original program to restore using error correction.
 - Both support compression.
