@@ -31,6 +31,7 @@ Paper is not the best or most efficient storage method, so you can't back up big
 - python-pillow
 - imagemagick
 - zbar (optional, used to digitally test restore)
+- the DejaVu Sans font (fonts-dejavu on debian,  ttf-dejavu on arch. included.)
 ### Restore Requirements
 - **A Linux computer and knowledge of how to use the command line**
 - **The restore process works without qr-backup installed**
