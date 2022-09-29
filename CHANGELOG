@@ -1,4 +1,4 @@
-v1.1 (not released)
+v1.1
 - Added the `--restore` option so qr-backup will do the restore for you.
 - Add erasure coding, which is turned on by default. This allows losing up
   to 30% of QR codes, but only if you are restoring using qr-backup.
@@ -32,6 +32,9 @@ v1.1 (not released)
 - Format: Codes are now labeled as "N01/50" rather than "01". This is to
   support multiple code types down the line, and to allow a progress bar during
   restore.
+- Added --version, -V option
+- Added manpage
+- Added Makefile
 - Bugfix (#6): Reading from stdin did not work correctly. Now it should.
 - Bugfix (#7): The instructions are always full-page-width now.
 - Bugfix (#15): Generated PDF is always identical (except the included date).
