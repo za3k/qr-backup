@@ -31,7 +31,7 @@ import tempfile
 import textwrap
 
 assert sys.version_info >= (3,6), "Python 3.6 is required. Submit a patch removing f-strings to fix it, sucka!"
-VERSION = "1.1"
+VERSION = "1.1.1"
 
 # Option(s), Default, Description
 BACKUP_OPTIONS = [
