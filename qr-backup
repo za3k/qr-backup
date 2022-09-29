@@ -64,7 +64,8 @@ RESTORE_OPTIONS = [
     (("--webcam-restore",), "automatic", "Force webcam-based restore."),
 ]
 BOTH_OPTIONS = [
-    (("--verbose", "-v"), "off", "Print more detailed information during run."),
+    (("--verbose", "-v"), None, "Print more detailed information during run."),
+    (("--version", "-V"), None, "Print the verison and immediately exit."),
 ]
 
 HELP='''Usage: qr-codes.py [OPTIONS] FILE
@@ -74,14 +75,14 @@ Convert a binary file to a paper .pdf backup of QR codes. With '--restore', read
 
 Restore directions are included in the PDF, and do not require qr-backup. Make sure to test that you can actually read the QR size you select.
 
+Options:
+{both_options}
+
 Backup options:
 {backup_options}
 
 Restore options:
-{restore_options}
-
-Options for both:
-{both_options}'''
+{restore_options}'''
 
 MAN_MD='''% QR-BACKUP(1) qr-backup {VERSION}
 % Zachary Vance
@@ -102,7 +103,7 @@ qr-backup - back up file(s) to a series of QR codes on paper
 
 Restore is possible without **qr-backup**. Restore directions are included in the paper backup.
 
-# COMMON OPTIONS
+# OPTIONS
 {both_options}
 
 # BACKUP OPTIONS
@@ -163,7 +164,10 @@ def man_options(options):
             arg_parts = arg.split()
             args2.append(" ".join([arg_parts[0]] + [underline_man_part(p) for p in arg_parts[1:]]))
         arg_line = "{}\n".format(", ".join("**{}**".format(arg) for arg in args2))
-        rest_line = ": {} Default: {}".format(description, default)
+        if default is None:
+            rest_line = ": {}".format(description)
+        else:
+            rest_line = ": {} Default: {}".format(description, default)
         parts.append(arg_line + rest_line)
     return "\n\n".join(parts)
 
@@ -172,7 +176,10 @@ def cli_options(options):
     for args, default, description in options:
         arg_line = "    {}\n".format(", ".join(args))
         desc_line = "        {}\n".format(description)
-        default_line = "        Default: {}\n".format(default)
+        if default is None:
+            default_line = ""
+        else:
+            default_line = "        Default: {}\n".format(default)
         parts.append(arg_line + desc_line + default_line)
     return "".join(parts)
 HELP = HELP.format(
@@ -1846,10 +1853,16 @@ def main_restore(args):
 
     sys.exit(exit_status)
 
+def main_version():
+    print("qr-backup v{}".format(VERSION))
+    sys.exit(0)
+
 if __name__ == "__main__":
     # parse command-line arguments
     args = sys.argv[1:]
-    if len(args) >= 1 and args[0] in ["-r", "--restore"]:
+    if len(args) == 1 and args[0] in ["-V", "--version"]:
+        main_version()
+    elif len(args) >= 1 and args[0] in ["-r", "--restore"]:
         main_restore(args[1:])
     else:
         main_backup(args)

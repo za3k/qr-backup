@@ -11,6 +11,13 @@ original file.
 Restore directions are included in the PDF, and do not require qr-backup. Make
 sure to test that you can actually read the QR size you select.
 
+Options:
+    --verbose, -v
+        Print more detailed information during run.
+    --version, -V
+        Print the verison and immediately exit.
+
+
 Backup options:
     --dpi DPI
         Sets the print resolution of your printer.
@@ -99,11 +106,5 @@ Restore options:
     --webcam-restore
         Force webcam-based restore.
         Default: automatic
-
-
-Options for both:
-    --verbose, -v
-        Print more detailed information during run.
-        Default: off
 
 ```

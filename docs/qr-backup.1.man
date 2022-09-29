@@ -43,11 +43,13 @@ Restore is done using a webcam or scanner.
 .PP
 Restore is possible without \f[B]qr-backup\f[R].
 Restore directions are included in the paper backup.
-.SH COMMON OPTIONS
+.SH OPTIONS
 .TP
 \f[B]\[en]verbose\f[R], \f[B]-v\f[R]
 Print more detailed information during run.
-Default: off
+.TP
+\f[B]\[en]version\f[R], \f[B]-V\f[R]
+Print the verison and immediately exit.
 .SH BACKUP OPTIONS
 .TP
 \f[B]\[en]dpi \f[BI]DPI\f[B]\f[R]
