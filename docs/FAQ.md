@@ -21,6 +21,7 @@
 - [What's new in v1.1?](#whats-new-in-v11)
 - [Why does qr-backup restore to stdout? / why doesn't qr-backup extract tar files?](#why-does-qr-backup-restore-to-stdout)
 - [What license is qr-backup released under?](#what-license-is-qr-backup-released-under)
+- [Why did you write qr-backup?](#why-did-you-write-qr-backup)
 
 # Answers
 
@@ -249,3 +250,6 @@ This avoids overwriting up the original files.
 
 ## What license is qr-backup released under?
 I release qr-backup into the public domain. I release qr-backup under [CC0](https://creativecommons.org/share-your-work/public-domain/cc0/)
+
+## Why did you write qr-backup?
+I wrote mostly for myself, to back up my journal (about 2MB). I hope you'll find it useful too.
