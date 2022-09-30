@@ -14,8 +14,8 @@ endif
 
 all:
 install:
-	install qr-backup $(DESTDIR)$(PREFIX)$(BINDIR)/qr-backup
-	install -m 644 docs/qr-backup.1.man $(DESTDIR)$(PREFIX)$(MANDIR)/man1/qr-backup.1
+	install -D qr-backup $(DESTDIR)$(PREFIX)$(BINDIR)/qr-backup
+	install -D -m 644 docs/qr-backup.1.man $(DESTDIR)$(PREFIX)$(MANDIR)/man1/qr-backup.1
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)$(BINDIR)/qr-backup
 	rm -f $(DESTDIR)$(PREFIX)$(MANDIR)/man1/qr-backup.1
