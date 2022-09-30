@@ -21,7 +21,8 @@
 qr-backup - back up file(s) to a series of QR codes on paper
 .SH SYNOPSIS
 .PP
-\f[B]qr-backup\f[R] [\f[I]OPTIONS\f[R]]
+\f[B]qr-backup\f[R] [\f[I]OPTIONS\f[R]] \f[I]FILE\f[R]
+[\f[I]FILE\f[R]\&...]
 .PD 0
 .P
 .PD

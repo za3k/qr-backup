@@ -1,7 +1,7 @@
 Output of `qr-backup --help`:
 
 ```
-Usage: qr-codes.py [OPTIONS] FILE
+Usage: qr-codes.py [OPTIONS] FILE [FILE...]
                qr-codes.py --restore [OPTIONS]
                qr-codes.py --restore [OPTIONS] IMAGE [IMAGE ...]
 Convert a binary file to a paper .pdf backup of QR codes. With '--restore', read
