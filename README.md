@@ -18,10 +18,10 @@ If your file is lost, corrupted, deleted, etc, you can restore from your paper b
 - (Optional) Print multiple copies for safety
 - (Optional) Print smaller, denser codes to boost storage, up to 130KB/page
 - (Restore with qr-backup only) Automatic redundancy. Lose up to 30% of pages or QR codes safely
-- See [Command Line Options](docs/USAGE.md) for more
+- See [Command Line Options](docs/MAN.txt) for more
 
 ## [Install Guide](docs/INSTALL.md)
-## [Command Line Options](docs/USAGE.md)
+## [Command Line Options](docs/MAN.txt)
 
 ## How to Use
 #### Making a backup

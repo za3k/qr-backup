@@ -1387,17 +1387,11 @@ def generate_pdf(qrs, dpi, page_w_points, page_h_points, page_instructions, cove
 
     return pages
 
-USAGE="""Output of `qr-backup --help`:
-
-```
-{HELP}
-```
-"""
 def generate_docs(pages):
     """secret --generate-docs flag updates
-    - USAGE.md
     - docs/example.png
-    - docs/man_source.md (which generates docs/man.groff)
+    - docs/qr-backup.1.man (a groff man file)
+    - docs/MAN.txt (easy-to-read man page)
     """
     pages[0].save("docs/example.png")
 
@@ -1409,12 +1403,10 @@ def generate_docs(pages):
         restore_options=man_options(RESTORE_OPTIONS),
     )
     with open("docs/qr-backup.1.man", "w") as f:
-        # TODO: Why does this add a groff line break after every sentence? The "default" section at the end looks bad because of it.
         subprocess.run(["pandoc", "-s", "-t", "man"], input=man_md.encode('utf8'), stdout=f)
 
-    usage = USAGE.format(HELP=HELP)
-    with open("docs/USAGE.md", "w") as f:
-        f.write(usage)
+    with open("docs/MAN.txt", "w") as f:
+        subprocess.run(["man", "-l", "docs/qr-backup.1.man"], stdout=f, env={"MANWIDTH": "80"})
 
 def self_test_restore(restore_cmd, input_path, output_path, output_buffer, original_content, use_buffers, sha256sum, use_encryption, encryption_passphrase, expected_qrs):
     if use_encryption:
