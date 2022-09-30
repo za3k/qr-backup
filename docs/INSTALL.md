@@ -22,6 +22,7 @@ sudo make install
 - imagemagick
 - zbar (optional, used to digitally test restore)
 - the DejaVu Sans font (fonts-dejavu on debian,  ttf-dejavu on arch. included.)
+- gpg (if making an encrypted backup)
 ### Restore Requirements
 - **A Linux computer and knowledge of how to use the command line**
 - **The restore process works without qr-backup installed**
@@ -29,4 +30,4 @@ sudo make install
 - imagemagick
 - zbar
 - python-reedsolo (if using qr-restore)
-
+- gpg (if restoring an encrypted backup)
