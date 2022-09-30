@@ -1,4 +1,5 @@
 # Questions
+- [Should I back up to paper?](#should-i-back-up-to-paper)
 - [How much data does this back up per page / why don't you back up more data per page?](#how-much-data-does-this-back-up-per-page)
 - [What are the advantages of paper backups?](#what-are-the-advantages-of-paper-backups)
 - [How do I back up more data per page?](#how-do-i-back-up-more-data-per-page)
@@ -24,6 +25,13 @@
 - [Why did you write qr-backup?](#why-did-you-write-qr-backup)
 
 # Answers
+
+## Should I back up to paper?
+Possibly. You should still back it up to something more usual like a USB thumbstick *first*, because it's easier to restore and update.
+
+Common files to back up are small important records, and small secret files. Examples include: a diary, an address book, a short story you wrote, financial records, medical records, an ssh or gpg cryptographic key, or a cryptocurrency (bitcoin) wallet.
+
+Paper is not the best or most efficient storage method, so you can't back up big files. 10KB or 100KB files is a reasonable limit.
 
 ## How much data does this back up per page?
 qr-backup on *default* settings backs up at 3-4KB/page raw data (about 15KB/page english text).
