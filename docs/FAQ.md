@@ -1,39 +1,100 @@
 # Questions
+
+### Paper Backups
 - [Should I back up to paper?](#should-i-back-up-to-paper)
-- [How much data does this back up per page / why don't you back up more data per page?](#how-much-data-does-this-back-up-per-page)
 - [What are the advantages of paper backups?](#what-are-the-advantages-of-paper-backups)
-- [How do I back up more data per page?](#how-do-i-back-up-more-data-per-page)
 - [How much of my backup can I lose and still restore?](#how-much-of-my-backup-can-i-lose-and-still-restore)
-- [Do you support Windows / why don't you support Windows?](#why-dont-you-support-windows)
-- [Do you support mac/OS X?](#why-dont-you-support-macos-x)
-- [Why doesn't the restore process require qr-backup?](#why-doesnt-the-restore-process-require-qr-backup)
-- [How exactly does the backup/restore process work?](#how-exactly-does-the-backuprestore-process-work)
 - [Should I encrypt (password-protect) my backups?](#should-i-encrypt-password-protect-my-backups)
 - [How can I protect my paper backup?](#how-can-i-protect-my-paper-backup)
-- [What are the design goals of qr-backup?](#what-are-the-design-goals-of-qr-backup)
+
+### Features
+- [Do you support Windows?](#do-you-support-windows)
+- [Do you support mac/OS X?](#do-you-support-macos-x)
+- [How much data does this back up per page / why don't you back up more data per page?](#how-much-data-does-this-back-up-per-page)
+- [How do I back up more data per page?](#how-do-i-back-up-more-data-per-page)
+- [Why did you write qr-backup?](#why-did-you-write-qr-backup)
+- [Why doesn't the restore process require qr-backup?](#why-doesnt-the-restore-process-require-qr-backup)
+- [How exactly does the backup/restore process work?](#how-exactly-does-the-backuprestore-process-work)
+- [What are the design goals of qr-backup? / Why won't you add the feature I want?](#what-are-the-design-goals-of-qr-backup)
+- [What license is qr-backup released under?](#what-license-is-qr-backup-released-under)
+
+### Competition
+- [What other paper backup projects exist?](#what-other-paper-backup-projects-exist)
+- [How does qr-backup compare to OllyDbg's Paperback?](#how-does-qr-backup-compare-to-ollydbgs-paperback)
+
+### Usage
+- [How do I back up multiple files?](#how-do-i-back-up-multiple-files)
+- [Why does qr-backup restore to stdout? / why doesn't qr-backup extract tar files?](#why-does-qr-backup-restore-to-stdout-rather-than-the-original-filename)
+
+### Troubleshooting
+- [My self-test is failing on Ubuntu](#my-self-test-is-failing-on-ubuntu)
 - [How do I find the maximum dimensions of my printer?](#how-do-i-find-the-maximum-dimensions-of-my-printer)
 - [When I print a page, part of it is cut off](#when-i-print-a-page-part-of-it-is-cut-off)
 - [When I print the backup, the last page is rotated](#when-i-print-the-backup-the-last-page-is-rotated)
-- [How do I back up multiple files?](#how-do-i-back-up-multiple-files)
-- [How does qr-backup compare to OllyDbg's Paperback?](#how-does-qr-backup-compare-to-ollydbgs-paperback)
-- [What other paper backup projects exist?](#what-other-paper-backup-projects-exist)
-- [Can I restore backups made using older versions of qr-backup?](#can-i-restore-backups-made-using-older-versions-of-qr-backup)
-- [My self-test is failing on Ubuntu](#my-self-test-is-failing-on-ubuntu)
-- [What's new in v1.1?](#whats-new-in-v11)
-- [Why does qr-backup restore to stdout? / why doesn't qr-backup extract tar files?](#why-does-qr-backup-restore-to-stdout)
-- [What license is qr-backup released under?](#what-license-is-qr-backup-released-under)
-- [Why did you write qr-backup?](#why-did-you-write-qr-backup)
 
-# Answers
+## Paper Backups
 
-## Should I back up to paper?
+### Should I back up to paper?
 Possibly. You should still back it up to something more usual like a USB thumbstick *first*, because it's easier to restore and update.
 
 Common files to back up are small important records, and small secret files. Examples include: a diary, an address book, a short story you wrote, financial records, medical records, an ssh or gpg cryptographic key, or a cryptocurrency (bitcoin) wallet.
 
 Paper is not the best or most efficient storage method, so you can't back up big files. 10KB or 100KB files is a reasonable limit.
 
-## How much data does this back up per page?
+### What are the advantages of paper backups?
+- It's easy to think about physical stuff. Everyone can understand whether they still have a backup (by looking), whether it's damaged (by looking), and who can access their backup.
+- Paper can't be hacked. It's easy to think about who can access a paper backup compared to an online computer. Paper backups are a popular option to store GPG keys, SSH keys, crypto wallets, or encrypted messages for this reason.
+- It's fun. A lot of people make paper backups for the novelty factor.
+- Paper lasts a long time. CDs and flash-based storage (USB drives, SD cards, and many modern hard drives) usually stop working within 10 years. Magnetic storage works for a fairly long time unless it is damaged.
+- Paper has no parts that can break. It's common for hard drives to break, and for the data inside to become unreadable, even though the data is still okay.
+- Damage is visible. Sometimes a flash drive can be silently corrupted, or a drive's parts will break, but it looks OK. You can look at paper and whether it's damaged, and how much damage there is.
+
+### How much of my backup can I lose and still restore?
+Depends.
+
+**New in v1.1**: If you restore using qr-backup, you can lose roughly 30% of the pages or QR codes, no more. Call it 20% to be safe.
+
+If you don't have qr-backup, it's more fragile. If you lose one QR code, you're hosed. You won't be able to restore. If some dirt, a pen mark, etc gets on a QR code, you'll be fine.
+
+There are some command-line options that reduce the damage:
+- `--num-copies` prints duplicates of QR codes. If you're printing duplicates, I recommend three copies (rather arbitrarily).
+- `--no-compress` disables compression. This makes the backup longer, but it means that if you have 50% of the data, you can recover 50% of the file. For some backup types (text documents) this is useful. For others (bitcoin wallets) it is not.
+- `--shuffle`, which is on by default, randomly re-orders codes. This helps if you are restoring with qr-backup. Erasure codes can only cover up to 256 QRs, so large files (>20KB) are split into sets of codes. If you lose 30% of codes from one set, you lose data. To combat this, qr-backup orders codes randomly by default, so you're unlikely to lose many codes from the same set.
+
+### Should I encrypt (password-protect) my backups?
+That's up to you. I don't, because I think it's more likely I'll forget my password than have someone steal my papers.
+
+### How can I protect my paper backup?
+In order:
+- Test that your restore procedure works. Seriously, do that first.
+- The most common failure mode for paper backups is to *forget* about your backup or throw it out accidentally.
+    - On each copy of the backup, document what it is. You can hand-write or attach a cover sheet.
+        - Who you are, and several forms of contact information (phone, address, email, contact info of family, friends, or your place of work)
+        - Why it shouldn't be thrown out (or when it should be).
+        - What exactly this backup is (what's in the file, but also that this is a physical backup of computer data)
+        - Where any other copies are, in case this one is damaged
+    - If people other than you should know about the backup, tell them. If anyone would throw this away, tell them not to.
+    - Wherever you normally keep your reminders, document that you have a backup, what exactly of, and where it is.
+- If you encrypt your backup, write down your password, and store it *somewhere else* you won't forget.
+- Make several copies in different buildings/cities. More copies is simply better than one well-protected copy.
+- Protect against folding and losing pages. A box or envelope may help. Folding on a QR code can make it unreadable, and losing a page means you lose your data.
+- If you're backing up something like pictures or text documents, print them and attach them to the qr-backup paper backup. That way you have the data even if the restore process somehow fails.
+- Protect against water damage.
+- Use acid-free paper. I don't imagine inkjet vs laser printer is that important, but I'm not an expert.
+
+Protecting against fire damage is not worthwhile.
+
+## Features
+
+## Do you support windows?
+Not yet. It's on the [roadmap](https://github.com/za3k/qr-backup/issues/30).
+
+In the meantime, you could try [a different paper backup program](#what-other-paper-backup-projects-exist).
+
+## Do you support mac/OS X?
+Maybe. Please try installing it and let me know.
+
+### How much data does this back up per page?
 qr-backup on *default* settings backs up at 3-4KB/page raw data (about 15KB/page english text).
 
 At max settings, it backs up at 130KB/page raw (or 170KB/page raw with erasure coding disabled). I recommend against these settings. Your restore will fail unless you have an incredibly good scanner, and maybe even then.
@@ -46,15 +107,7 @@ That said, if you only want to support your own webcam/scanner, you're welcome t
 
 You can also try [another program](#what-other-paper-backup-projects-exist). Density-focused ones claim 100-300KB/page. 
 
-## What are the advantages of paper backups?
-- It's easy to think about physical stuff. Everyone can understand whether they still have a backup (by looking), whether it's damaged (by looking), and who can access their backup.
-- Paper can't be hacked. It's easy to think about who can access a paper backup compared to an online computer. Paper backups are a popular option to store GPG keys, SSH keys, crypto wallets, or encrypted messages for this reason.
-- It's fun. A lot of people make paper backups for the novelty factor.
-- Paper lasts a long time. CDs and flash-based storage (USB drives, SD cards, and many modern hard drives) usually stop working within 10 years. Magnetic storage works for a fairly long time unless it is damaged.
-- Paper has no parts that can break. It's common for hard drives to break, and for the data inside to become unreadable, even though the data is still okay.
-- Damage is visible. Sometimes a flash drive can be silently corrupted, or a drive's parts will break, but it looks OK. You can look at paper and whether it's damaged, and how much damage there is.
-
-## How do I back up more data per page?
+### How do I back up more data per page?
 Maybe you have a better webcam/scanner than I do, in which case you can increase settings. The only cost if that people with bad webcams like me can't restore your backup. Once you hit your webcam/scanner's limit, you can still shove more data in, but there will be cost tradeoffs as you lose reliability.
 
 Before committing to a QR size and scale, test your restore with an actual webcam or scanner! Looking OK to your eyes is not enough.
@@ -71,34 +124,15 @@ Try these, from most effective to least:
 
 You can also use a [different paper backup program](#what-other-paper-backup-projects-exist). Ultimately, qr-backup is designed to make restores easy, not to pack data in as densely as posible.
 
-## How much of my backup can I lose and still restore?
-Depends whether you have qr-backup when you're doing the restore.
+### Why did you write qr-backup?
+I wrote it to back up my journal (about 2MB). I hope you'll find it useful too.
 
-**New in v1.1**: If you restore using qr-backup, you can lose roughly 30% of the pages or QR codes, no more. The technology used is called erasure coding. It's the same thing that lets you read a damaged CD, a bit flip in ECC RAM, or a damaged zraid volume.
+### Why doesn't the restore process require qr-backup?
+Because that's awesome.
 
-If you don't have qr-backup, it's more fragile. If you lose one page, or even one QR code (like if it's torn off or you spill grape juice), you're hosed. You won't be able to restore. If some dirt, a pen mark, etc gets on a QR code, you'll be fine.
+I want the restore process to work when qr-backup has been lost to history. Also, I want users to understand how the backup/restore process works.
 
-There are some command-line options that reduce the damage:
-
-- `--num-copies` prints duplicates of QR codes. If you're printing duplicates, I recommend three copies (rather arbitrarily).
-- `--no-compress` disables compression. This makes the backup longer, but it means that if you have 50% of the data, you can recover 50% of the file. For some backup types (text documents) this is useful. For others (bitcoin wallets) it is not.
-- `--shuffle`, which is on by default, randomly re-orders codes. This helps if you are restoring with QR-backup. Erasure codes can only cover up to 256 QRs, so large files (>20KB) are split into sets of codes. If you lose 30% of codes from one set, you lose data. To combat this, qr-backup orders codes randomly by default, so you're unlikely to lose many codes from the same set.
-
-## Why don't you support windows?
-I might someday, I just haven't done it yet.
-
-- I don't use Windows myself
-- I want the restore process to work WITHOUT qr-backup software. I'm not sure how to do this on Windows yet.
-
-In the meantime, you could try [a different paper backup program](#what-other-paper-backup-projects-exist).
-
-## Why don't you support mac/OS X?
-Both backup and restore probably work, actually, it's just not tested. `brew install zbar` and let me know in the issue tracker.
-
-## Why doesn't the restore process require qr-backup?
-Because I want the restore process to work when qr-backup has been lost to history. Also, I want users to understand how the backup/restore process works.
-
-## How exactly does the backup/restore process work?
+### How exactly does the backup/restore process work?
 The exact commands to run are described in the README and on the printed backup. But here's a conceptual explanation of how things work.
 
 If find this explanation helpful, run qr-backup with the `--instructions both` option to add it to the paper backup.
@@ -118,7 +152,7 @@ The backup process:
 - Labels are added. If there are 50 chunks, the first is labeled "N01/50" and the last is "N50/50". Parity chunks are labeled "P01/21" through "P21/21".
 - Each chunk is printed as a QR code on the paper, and labeled with the same code label.
 
-The restore process is
+The restore process is the same, but in reverse:
 - First, the user scans each QR code (in any order). 
 - Since each code contains the code number (01-50), the computer sorts everything out, making sure each code 01-50 is present exactly once. The codes are put in order (and duplicates removed).
 - The "N01/50" thru "N50/50" labels are removed. Any chunk with an unexpected label is thrown out (for forwards compatibility).
@@ -132,45 +166,82 @@ The restore process is
 - Any tar file is *not* decompressed (to avoid overwriting the original files)
 - The file is checksummed using sha256, which verifies the file is perfectly restored.
 
-## Should I encrypt (password-protect) my backups?
-That's up to you. 
-
-I don't, because I think it's likely that I'll forget my password in 5-10 years. But, I'm not backing up my bitcoin wallet either.
-
-**New in v1.1:** Use `--encrypt generate` or `--encrypt <PASS>` to password-protect your backup. Behind the scenes, this just calls gpg.
-
-If you do need to encrypt your backup, remember that you can write your password down (somewhere different!) on physical paper. Preferably several places--you need to remember where it's written. 
-
-The especially geeky can also look into Shamir's secret-sharing scheme, which can let you need any 3 out of 4 pieces of information to restore. Remember to test your restore as usual.
-
-## How can I protect my paper backup?
-Test that your restore procedure works. Seriously, do that first.
-
-Then (in order): 
-- The most common failure mode for paper backups is to *forget* about your backup or throw it out accidentally.
-    - On each copy of the backup, document what it is. You can hand-write or attach a cover sheet.
-        - Who you are, and several forms of contact information (phone, address, email, contact info of family, friends, or your place of work)
-        - Why it shouldn't be thrown out (or when it should be).
-        - What exactly this backup is (what's in the file, but also that this is a physical backup of computer data)
-        - Where any other copies are, in case this one is damaged
-    - If people other than you should know about the backup, tell them. If anyone would throw this away, tell them not to.
-    - Wherever you normally keep your reminders, document that you have a backup, what exactly of, and where it is.
-- Make several copies in different buildings/cities. More copies is simply better than one well-protected copy.
-- Protect against folding and losing pages. A box or envelope may help. Folding on a QR code can make it unreadable, and losing a page means you lose your data.
-- If you're backing up something like pictures or text documents, print them and attach them to the qr-backup paper backup. That way you have the data even if the restore process somehow fails.
-- Protect against water damage.
-- Use acid-free paper. I don't imagine inkjet vs laser printer is that important, but I'm not an expert.
-- Protect against fire damage. The best way to protect against fire damage to paper is to have a copy in another building.
-
-## What are the design goals of qr-backup?
-Okay, nobody asks this, but it's the most frequent reason I say no to a feature request.
-
+### What are the design goals of qr-backup?
 - It should be very easy to restore the backup
 - It should actually work on my actual computer, on default settings
 - It should actually work with low-quality hardware (ex bad black-and-white printer and bad webcam)
 - Restore should not require qr-backup, or any other unusual software. (Unfortunately there is no installed-by-default qr reader on Linux, but zbar is the only requirement)
 - An average human being should be able to follow the restore directions (this is not really true currently, but an average command-line Linux user can)
 - The output should include good documentation
+
+### What license is qr-backup released under?
+I release qr-backup into the public domain. I release qr-backup under [CC0](https://creativecommons.org/share-your-work/public-domain/cc0/)
+
+## Competition
+
+### What other paper backup projects exist?
+2D code based (like qr-backup):
+- [qr-backup](https://github.com/za3k/qr-backup): This project. Based on QR codes. Focuses on easy restore using webcam and standard CLI tools. Low data density.
+- [qrencode](https://fukuchi.org/works/qrencode/), etc: Small amount of data can be directly printed to one QR code, and restored by any QR scanner.
+- [paperbackup](https://github.com/intra2net/paperbackup): Remarkably similar to qr-backup, down to the code format. Based on QR codes. Focused on GPG/SSH key backup. See also the [paperkey](http://www.jabberwocky.com/software/paperkey/) preprocessor.
+- [asc2qr.sh](https://github.com/4bitfocus/asc-key-to-qr-code): QR-based, less polished.
+- [qrpdf](https://github.com/EmperorArthur/qrpdf): QR-based, similar to qr-backup. May support parity encoding.
+- [qrdump](https://github.com/jerabaul29/qrdump): **Incomplete** QR-based, similar to qr-backup.
+
+Dense pixel grid (like Paperbak). Everything in this section needs a good scanner:
+- Paperback [explanation](https://ollydbg.de/Paperbak/) and [code](https://github.com/Rupan/paperbak/) by OlyDbg: Much denser, windows-only. Uses reed-solomon codes.
+- [paperback-cli](https://git.teknik.io/scuti/paperback-cli): Cross-OS port for OlyDbg's Paperbak program.
+- [ColorSafe](https://github.com/colorsafe/colorsafe): Black and white or color output. Split into sectors. Error correction is reed-solomon within a sector, none outside (as best I could find out).
+- [optar](http://ronja.twibright.com/optar/): Black and white. Uses Golay codes.
+
+### How does qr-backup compare to OllyDbg's Paperback?
+Paperbak was a well-known attempt to write data to paper as densely as possible.
+
+First, here's what Paperback/Paperbak is:
+- [Description](https://ollydbg.de/Paperbak/)
+- [Original Code](https://github.com/timwaters/paperback )
+- [Attempted Linux fork](https://github.com/cyphar/paperback)
+
+Here's how they are similar/different
+- Both have the same essential goal and flow: back some stuff up to paper and restore it later.
+- Both are black-and-white only
+- Paperbak is Windows-only; qr-backup runs on Linux command-line.
+- Paperbak was last updated in 2002. qr-backup is maintained. I'm not super clear if Paperback still works end to end (I don't have Windows).
+- Paperbak was an experiment/joke. qr-backup is designed for actual long-term backups.
+- Paperbak is focused around shoving the most data on paper possible. qr-backup is focused on easy, futureproof restore that works.
+- Paperbak needs Paperbak to restore. qr-backup only needs standard Linux tools (and a QR reader).
+- Paperbak is needs a flatbed-quality scanner. qr-backup can use a webcam or any scanner.
+- Paperbak's documentation throws out the figure 300KB/page. qr-backup on default settings stores [3KB/page](#how-much-data-does-this-back-up-per-page), although this can be increased to 130KB/page. Most of this is Paperbak requiring a good scanner, and qr-backup requiring an average webcam. QR, zbar, and qr-backup inefficiencies also contribute some.
+- Paperbak uses a proprietary format, and needs Paperbak to restore. qr-backup uses an esoteric mix of existing formats like QR and gzip, and can be restored with a bash oneliner of standard linux tools.
+- Both support compression.
+- Both support encryption.
+- Both support reed-solomon coding, so you can lose part of the page(s) and still restore.
+- Both print some information about the file
+- qr-backup prints an explanation about what a paper backup is, and how to restore it.
+- Paperbak has only library dependencies. qr-backup has library and CLI dependencies (zbar, convert)
+- Paperbak is not backwards-compatible, qr-backup is backwards-compatible
+
+## Usage
+
+### How do I back up multiple files?
+1. **New in v1.1**: Run `qr-backup FILE1 FILE2 FILE3`.
+2. **New in v1.1**: Run `qr-backup DIRECTORY`.
+3. You can tar/zip the files yourself, and back up the tar/zip.
+4. You can run `qr-backup` multiple times, and print each PDF.
+
+In method 1-3, if you lose enough QR codes, you lose *all* the files.
+In method 4, if you lose QR codes, you only lose that file.
+
+### Why does qr-backup restore to stdout, rather than the original filename?
+This avoids overwriting up the original files. For the same reason, multiple files are not automatically extracted
+
+## Troubleshooting
+
+## My self-test is failing on Ubuntu
+The generated PDF is probably fine, but can't be read. Ubuntu has disabled ImageMagick working on PDFs for security reasons. This breaks qr-backup's self-test process. You have two options.
+
+1. Disable or modify the security policy. Check out StackOverflow for information of [why](https://askubuntu.com/questions/1081895/trouble-with-batch-conversion-of-png-to-pdf-using-convert) and [how to disable it](https://askubuntu.com/questions/1127260/imagemagick-convert-not-allowed) if you want.
+2. Test your restore by printing your backup.
 
 ## How do I find the maximum dimensions of my printer?
 If you really want to squeeze things in, you need to know how large you can print on a page. There are two options to figure out the max print size.
@@ -193,70 +264,3 @@ I believe there is a remaining [issue](https://github.com/OpenPrinting/cups-filt
 
 ## When I print the backup, the last page is rotated
 Pass CUPS the option 'nopdfAutoRotate'.
-
-## Can I restore backups made using older versions of qr-backup?
-No, but I'll try to support it going forward.
-
-## How do I back up multiple files?
-1. **New in v1.1**: Run `qr-backup FILE1 FILE2 FILE3`.
-2. **New in v1.1**: Run `qr-backup DIRECTORY`.
-3. You can tar/zip the files yourself, and back up the tar/zip.
-4. You can run `qr-backup` multiple times, and print each PDF.
-
-In method 1-3, if you lose enough QR codes, you lose *all* the files.
-In method 4, if you lose QR codes, you only lose that file.
-
-## How does qr-backup compare to OllyDbg's Paperback?
-First, here's what Paperback/Paperbak is:
-- [Description](https://ollydbg.de/Paperbak/)
-- [Original Code](https://github.com/timwaters/paperback )
-- [Attempted Linux fork](https://github.com/cyphar/paperback)
-
-Here's how they are similar/different
-- Both have the same essential goal and flow: back some stuff up to paper and restore it later.
-- Paperbak is Windows-only; qr-backup runs on Linux command-line.
-- Paperbak was an experiment/joke. qr-backup is designed for actual long-term backups.
-- Paperbak is focused around shoving the most data on paper possible (with some nice extras). qr-backup is focused on easy restore that actually works (with some nice extras).
-- Paperbak is designed to want a high-quality scanner (1.5x print dpi). qr-backup can use a webcam, sucky scanner, or whatever else that can read QR codes with a little hacking.
-- At a best estimate, with default settings, Paperbak stores 300KB/page, and qr-backup stores [3KB/page](#how-much-data-does-this-back-up-per-page). Most of this is Paperbak requiring a good scanner, and qr-backup requiring an average webcam. QR, zbar, and qr-backup inefficiencies also contribute some.
-- Paperbak uses a proprietary format, and needs Paperbak to restore. qr-backup uses an esoteric mix of existing formats like QR and gzip, and can be restored with a bash oneliner of standard linux tools.
-- Both support reed-solomon coding, so you can lose part of the page(s) and still restore. Both require the original program to restore using error correction.
-- Both support compression.
-- Both support encryption.
-- qr-backup prints a bunch of human-readable info on the page explaining what it is and how to restore. Paperbak optionally prints a little of this (mostly the file name, size, and date)
-- Both are black-and-white only
-- qr-backup has both library and CLI dependencies (zbar, convert). Paperbak has only library dependencies.
-- qr-backup is maintained. PaperBak was last updated in 2002. I'm not super clear if Paperback still works end to end (author doesn't have Windows).
-
-## What other paper backup projects exist?
-2D code based (like qr-backup):
-- [qr-backup](https://github.com/za3k/qr-backup): This project. Based on QR codes. Focuses on easy restore using webcam and standard CLI tools. Low data density.
-- [qrencode](https://fukuchi.org/works/qrencode/), etc: Small amount of data can be directly printed to one QR code, and restored by any QR scanner.
-- [paperbackup](https://github.com/intra2net/paperbackup): Remarkably similar to qr-backup, down to the code format. Based on QR codes. Focused on GPG/SSH key backup. See also the [paperkey](http://www.jabberwocky.com/software/paperkey/) preprocessor.
-- [asc2qr.sh](https://github.com/4bitfocus/asc-key-to-qr-code): QR-based, less polished.
-- [qrpdf](https://github.com/EmperorArthur/qrpdf): QR-based, similar to qr-backup. May support parity encoding.
-- [qrdump](https://github.com/jerabaul29/qrdump): **Incomplete** QR-based, similar to qr-backup.
-
-Dense pixel grid (like Paperbak). Everything in this section needs a good scanner:
-- Paperback [explanation](https://ollydbg.de/Paperbak/) and [code](https://github.com/Rupan/paperbak/) by OlyDbg: Much denser, windows-only. Uses reed-solomon codes.
-- [paperback-cli](https://git.teknik.io/scuti/paperback-cli): Cross-OS port for OlyDbg's Paperbak program.
-- [ColorSafe](https://github.com/colorsafe/colorsafe): Black and white or color output. Split into sectors. Error correction is reed-solomon within a sector, none outside (as best I could find out).
-- [optar](http://ronja.twibright.com/optar/): Black and white. Uses Golay codes.
-
-## My self-test is failing on Ubuntu
-The generated PDF is probably fine, but can't be read. Ubuntu has disabled ImageMagick working on PDFs for security reasons. This breaks qr-backup's self-test process. You have two options.
-
-1. Disable or modify the security policy. Check out StackOverflow for information of [why](https://askubuntu.com/questions/1081895/trouble-with-batch-conversion-of-png-to-pdf-using-convert) and [how to disable it](https://askubuntu.com/questions/1127260/imagemagick-convert-not-allowed) if you want.
-2. Test your restore by printing your backup.
-
-## What's new in v1.1?
-Go read the [CHANGELOG](https://github.com/za3k/qr-backup/blob/master/CHANGELOG).
-
-## Why does qr-backup restore to stdout?
-This avoids overwriting up the original files.
-
-## What license is qr-backup released under?
-I release qr-backup into the public domain. I release qr-backup under [CC0](https://creativecommons.org/share-your-work/public-domain/cc0/)
-
-## Why did you write qr-backup?
-I wrote mostly for myself, to back up my journal (about 2MB). I hope you'll find it useful too.
