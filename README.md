@@ -22,6 +22,5 @@ If your file is lost, corrupted, deleted, etc, you can restore from your paper b
 
 ## [Install Guide](docs/INSTALL.md)
 ## [How to Use](docs/WALKTHROUGH.md)
-## [Features](docs/FEATURES.md)
 ## [Command Line Options](docs/USAGE.md)
 ## [FAQ](docs/FAQ.md)
