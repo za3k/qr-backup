@@ -260,7 +260,5 @@ You may need to adjust the dimensions of your printer (or paper size, are you us
 
 If you adjust your page dimensions to be smaller, and it works... but the QR codes are suddenly misaligned from your failing print by a small amount, you've hit a printing bug with full-size pages. You need to upgrade Ghostscript to 9.50 or later.
 
-I believe there is a remaining [issue](https://github.com/OpenPrinting/cups-filters/issues/373) in the new version, unfortunately.
-
 ## When I print the backup, the last page is rotated
 Pass CUPS the option 'nopdfAutoRotate'.
