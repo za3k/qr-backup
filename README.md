@@ -4,12 +4,24 @@ Generate paper backups for Linux. Currently **command-line Linux only**.
 
 If your file is lost, corrupted, deleted, etc, you can restore from your paper backup. qr-backup reads the [QR barcodes](https://en.wikipedia.org/wiki/QR_code) using your computer's webcam (or scanner) to get your file back.
 
+## Example Backup
+![Example Backup](docs/example.png)
+
+## Features
+- Restore without qr-backup installed (!)
+- Restore using webcam
+- Restore using scanner
+- Clear, printed instructions on what the file is and how to restore
+- Automatic compression
+- 3KB/page on default settings. Single-digit MB backups of text are practical
+- (Optional) Password protection
+- (Optional) Print multiple copies for safety
+- (Optional) Print smaller, denser codes to boost storage, up to 100KB/page
+- (Restore with qr-backup only) Automatic redundancy. Lose up to 20% of pages or QR codes safely
+- See [Command Line Options](docs/USAGE.md) for more
+
 ## [Install Guide](docs/INSTALL.md)
 ## [How to Use](docs/WALKTHROUGH.md)
 ## [Features](docs/FEATURES.md)
 ## [Command Line Options](docs/USAGE.md)
 ## [FAQ](docs/FAQ.md)
-
-## Example Backup
-![Example Backup](docs/example.png)
-
