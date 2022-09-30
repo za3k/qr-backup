@@ -926,6 +926,7 @@ def main_backup(args):
     use_compression = True
     output_path = None
     GENERATE_DOCS = False # Manually generate example.png for the README when qr-backup changes
+    backup_date = None # Secret hidden option for tests
     add_page_instructions = True
     add_cover_instructions = False
     notes = []
@@ -945,6 +946,10 @@ def main_backup(args):
         arg, args = args[0], args[1:]
         if arg in ["-h", "--help"]:
             show_help()
+        elif arg == "--backup-date":
+            if len(args) < 1:
+                show_help("--backup-date requires a date")
+            backup_date, args = args[0], args[1:]
         elif arg == "--compress":
             use_compression = True
         elif arg == "--dpi":
@@ -1121,7 +1126,8 @@ def main_backup(args):
 
     if GENERATE_DOCS: # example.png should be reproducible
         backup_date = "2021-06-15"
-    else:
+
+    if backup_date is None:
         backup_date = datetime.date.today().strftime("%Y-%m-%d")
 
     nice_cmd = ' '.join([x for x in [

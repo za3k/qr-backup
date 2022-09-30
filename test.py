@@ -20,7 +20,7 @@ def print_red(x):
 def print_green(x):
     print(GREEN + x + ENDC)
 
-DEFAULT_ARGS = ["--skip-checks", "-"]
+DEFAULT_ARGS = ["--skip-checks", "-", "--backup-date", "2022-09-22"]
 DEFAULT_RESTORE_ARGS = ["-"]
 
 TESTS = [
