@@ -5,8 +5,8 @@
 1. Install dependencies (see below)
 2. Run the following:
 
-    git clone https://github.com/za3k/qr-backup.git
-    sudo make install
+        git clone https://github.com/za3k/qr-backup.git
+        sudo make install
 
 ## Dependencies
 ### Backup Requirements
