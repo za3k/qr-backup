@@ -215,9 +215,9 @@ First, here's what Paperback/Paperbak is:
 Here's how they are similar/different
 - Both have the same essential goal and flow: back some stuff up to paper and restore it later.
 - Paperbak is Windows-only; qr-backup runs on Linux command-line.
+- Paperbak was an experiment/joke. qr-backup is designed for actual long-term backups.
 - Paperbak is focused around shoving the most data on paper possible (with some nice extras). qr-backup is focused on easy restore that actually works (with some nice extras).
-- I'm not super clear if Paperback actually/still works end to end (haven't tested it firsthand, because no Windows).
-- Paperbak is designed to want a high-quality scanner (3x print dpi). qr-backup can use a webcam, sucky scanner, or whatever else that can read QR codes with a little hacking.
+- Paperbak is designed to want a high-quality scanner (1.5x print dpi). qr-backup can use a webcam, sucky scanner, or whatever else that can read QR codes with a little hacking.
 - At a best estimate, with default settings, Paperbak stores 300KB/page, and qr-backup stores [3KB/page](#how-much-data-does-this-back-up-per-page). Most of this is Paperbak requiring a good scanner, and qr-backup requiring an average webcam. QR, zbar, and qr-backup inefficiencies also contribute some.
 - Paperbak uses a proprietary format, and needs Paperbak to restore. qr-backup uses an esoteric mix of existing formats like QR and gzip, and can be restored with a bash oneliner of standard linux tools.
 - Both support reed-solomon coding, so you can lose part of the page(s) and still restore. Both require the original program to restore using error correction.
@@ -226,8 +226,7 @@ Here's how they are similar/different
 - qr-backup prints a bunch of human-readable info on the page explaining what it is and how to restore. Paperbak optionally prints a little of this (mostly the file name, size, and date)
 - Both are black-and-white only
 - qr-backup has both library and CLI dependencies (zbar, convert). Paperbak has only library dependencies.
-- qr-backup is designed to someday work as an easy app on phones. It wouldn't be possible or useful to do this with paperbak, because it requires a scanner.
-- qr-backup is maintained (well, as of writing this FAQ answer, at least!)
+- qr-backup is maintained. PaperBak was last updated in 2002. I'm not super clear if Paperback still works end to end (author doesn't have Windows).
 
 ## What other paper backup projects exist?
 2D code based (like qr-backup):
