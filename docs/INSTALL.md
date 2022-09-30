@@ -7,6 +7,7 @@
 
 ```
 git clone https://github.com/za3k/qr-backup.git
+cd qr-backup
 sudo make install
 ```
 
