@@ -1,0 +1,77 @@
+_qr_backup_module()
+{
+    #local cur prev is_restore NON_RESTORE_OPTS RESTORE_OPTS
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    if [[ "${COMP_WORDS[1]}" = "--restore" ]]; then
+        is_restore=0
+    else
+        is_restore=1
+    fi
+
+    case $prev in
+        --error-correction)
+            COMPREPLY=( $(compgen -W "L M Q H" -- $cur) )
+            return 0
+            ;;
+        --instructions)
+            COMPREPLY=( $(compgen -W "page cover both none" -- $cur) )
+            return 0
+            ;;
+        -h|--help|-V|--version)
+            return 0
+            ;;
+    esac
+    case $cur in
+        -*)
+            # TODO: Different options for normal vs --restore
+            NON_RESTORE_OPTS="--restore
+                --help
+                --version
+                --verbose
+                --compress
+                --no-compress
+                --dpi
+                --encrypt
+                --encrypt-print-passphrase
+                --no-encrypt-print-passphrase
+                --erasure-coding
+                --no-erasure-coding
+                --error-correction
+                --filename
+                --instructions
+                --note
+                --output
+                --page
+                --qr-version
+                --scale
+                --shuffle
+                --no-shuffle
+                --skip-checks
+                --no-skip-checks"
+            RESTORE_OPTS="--code-count-erasure
+                --code-count-normal
+                --compress
+                --display
+                --encrypt
+                --image-restore
+                --no-compress
+                --no-display
+                --no-encrypt
+                --output
+                --sha256
+                --verbose
+                --webcam-restore"
+            if [[ "$is_restore" -eq 0 ]]; then
+                COMPREPLY=( $(compgen -W "${RESTORE_OPTS[*]}" -- $cur) )
+            else
+                COMPREPLY=( $(compgen -W "${NON_RESTORE_OPTS[*]}" -- $cur) )
+            fi
+            return 0
+            ;;
+    esac
+    compopt -o bashdefault -o default
+    return 0
+}
+complete -F _qr_backup_module qr-backup
