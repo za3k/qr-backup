@@ -1134,7 +1134,7 @@ def main_backup(args):
         allowable_loss_fraction = 0
 
     if GENERATE_DOCS: # example.png should be reproducible
-        backup_date = "2021-06-15"
+        backup_date = "2022-10-01"
 
     if backup_date is None:
         backup_date = datetime.date.today().strftime("%Y-%m-%d")
