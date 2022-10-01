@@ -1416,7 +1416,7 @@ def generate_docs(pages):
         both_options=man_options(BOTH_OPTIONS),
         backup_options=man_options(BACKUP_OPTIONS),
         restore_options=man_options(RESTORE_OPTIONS),
-    )
+    ).replace("--", r"-\-") # avoid en-dash in converted man page
     with open("docs/qr-backup.1.man", "w") as f:
         subprocess.run(["pandoc", "-s", "-t", "man"], input=man_md.encode('utf8'), stdout=f)
 
