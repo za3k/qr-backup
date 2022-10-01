@@ -1,4 +1,5 @@
 SHELL = /bin/sh
+VERSION=1.1.2
 
 ifeq ($(PREFIX),)
 PREFIX = /usr/local
@@ -12,12 +13,20 @@ ifeq ($(MANDIR),)
 MANDIR = /share/man
 endif
 
-all:
+all: dist/qr-backup-${VERSION}.tar.gz dist/qr-backup-${VERSION}.tar.gz.sig
+dist/qr-backup-${VERSION}.tar.gz: docs font src tests Makefile qr-backup requirements.txt
+	mkdir -p dist/qr-backup-${VERSION}
+	cp -rt dist/qr-backup-${VERSION} $^
+	cd dist && tar cf qr-backup-${VERSION}.tar qr-backup-${VERSION}
+	rm -f $@
+	gzip -9 dist/qr-backup-${VERSION}.tar
+dist/qr-backup-${VERSION}.tar.gz.sig: dist/qr-backup-${VERSION}.tar.gz
+	gpg --detach-sign --armor -o $@ $<
+clean:
+	rm -rf dist
 install:
 	install -D qr-backup $(DESTDIR)$(PREFIX)$(BINDIR)/qr-backup
 	install -D -m 644 docs/qr-backup.1.man $(DESTDIR)$(PREFIX)$(MANDIR)/man1/qr-backup.1
-	install -D qr-backup.bash-completion $(DESTDIR)$(PREFIX)/share/bash-completion/completions/qr-backup
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)$(BINDIR)/qr-backup
 	rm -f $(DESTDIR)$(PREFIX)$(MANDIR)/man1/qr-backup.1
-	rm -f $(DESTDIR)$(PREFIX)/share/bash-completion/completions/qr-backup

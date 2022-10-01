@@ -1852,7 +1852,9 @@ def main_restore(args):
         exit_status = 4
 
     # Write the output
-    if use_stdout:
+    if GENERATE_DOCS:
+        pass
+    elif use_stdout:
         sys.stdout.buffer.write(content)
     else:
         with open(output_path, "wb") as f:
