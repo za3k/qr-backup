@@ -1,5 +1,5 @@
 SHELL = /bin/sh
-VERSION=1.1.2
+VERSION := $(subst ",,$(subst VERSION = ,,$(shell grep "VERSION =" qr-backup)))
 
 ifeq ($(PREFIX),)
 PREFIX = /usr/local
