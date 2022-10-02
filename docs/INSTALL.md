@@ -9,7 +9,7 @@
 ```
 git clone https://github.com/za3k/qr-backup.git
 cd qr-backup
-pip install -r requirements.txt
+sudo pip install -r requirements.txt
 sudo make install
 ```
 
