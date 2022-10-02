@@ -1,33 +1,34 @@
-# Arch Linux
-    yay -S qr-backup`
+# Install Guide
+## Arch Linux
+    yay -S qr-backup
 
-# Other Linux
-1. Install dependencies (see below)
+## Other Linux
+1. Install CLI dependencies: gpg, imagemagick, and zbar
 2. Run the following:
 
 ```
 git clone https://github.com/za3k/qr-backup.git
 cd qr-backup
+pip install -r requirements.txt
 sudo make install
 ```
 
 ## Dependencies
-### Backup Requirements
 - **A Linux computer and knowledge of how to use the command line**
-- A printer
+- imagemagick
+- gpg
+- zbar
+- the DejaVu Sans font (fonts-dejavu on debian,  ttf-dejavu on arch. included.)
 - python 3.6 or later
+- python-pillow
 - python-qrcode
 - python-reedsolo
-- python-pillow
-- imagemagick
-- zbar (optional, used to digitally test restore)
-- the DejaVu Sans font (fonts-dejavu on debian,  ttf-dejavu on arch. included.)
-- gpg (if making an encrypted backup)
-### Restore Requirements
+
+### Restore without qr-backup
+Restore works without qr-backup installed. It requires:
+
 - **A Linux computer and knowledge of how to use the command line**
-- **The restore process works without qr-backup installed**
 - A webcam or scanner
 - imagemagick
 - zbar
-- python-reedsolo (if using qr-restore)
 - gpg (if restoring an encrypted backup)
