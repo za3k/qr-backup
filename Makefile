@@ -1,4 +1,5 @@
 SHELL = /bin/sh
+# The following line requires GNU make
 VERSION := $(subst ",,$(subst VERSION = ,,$(shell grep "VERSION =" qr-backup)))
 
 ifeq ($(PREFIX),)
