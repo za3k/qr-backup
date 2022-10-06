@@ -1,3 +1,8 @@
+git (unreleased)
+- Added bash completion
+- Added experimental debian packaging
+
+v1.1.2
 v1.1.1
 - Added --version, -V option
 - Added manpage
