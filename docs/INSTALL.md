@@ -3,7 +3,7 @@
     yay -S qr-backup
 
 ## Other Linux
-1. Install CLI dependencies: gpg, imagemagick, and zbar
+1. Install CLI dependencies: gnupg2, imagemagick, and zbar
 2. Run the following:
 
 ```
@@ -15,8 +15,8 @@ sudo make install
 
 ## Dependencies
 - **A Linux computer and knowledge of how to use the command line**
+- gnupg2
 - imagemagick
-- gpg
 - zbar
 - the DejaVu Sans font (fonts-dejavu on debian,  ttf-dejavu on arch. included.)
 - python 3.6 or later
@@ -31,4 +31,4 @@ Restore works without qr-backup installed. It requires:
 - A webcam or scanner
 - imagemagick
 - zbar
-- gpg (if restoring an encrypted backup)
+- gnupg2 (if restoring an encrypted backup)
