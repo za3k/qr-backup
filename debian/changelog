@@ -1,0 +1,7 @@
+qr-backup (1.1.2-1) UNRELEASED; urgency=medium
+
+  * Initial release. (Closes: #1021089: RFP: qr-backup -- paper backups
+    of files using QR codes)
+  * v1.1.2
+
+ -- Zachary Vance <za3k@za3k.com>  Wed, 05 Oct 2022 12:33:20 -0700

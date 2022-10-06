@@ -23,8 +23,14 @@ dist/qr-backup-${VERSION}.tar.gz: docs font src tests Makefile qr-backup require
 	gzip -9 dist/qr-backup-${VERSION}.tar
 dist/qr-backup-${VERSION}.tar.gz.sig: dist/qr-backup-${VERSION}.tar.gz
 	gpg --detach-sign --armor -o $@ $<
+deb_test: dist/qr-backup-${VERSION}.tar.gz
+	mkdir -p deb_test
+	cp dist/qr-backup-${VERSION}.tar.gz deb_test/qr-backup_${VERSION}.orig.tar.gz
+	cd deb_test && tar xf qr-backup_${VERSION}.orig.tar.gz
+	cp -lr debian deb_test/qr-backup-${VERSION}/debian
+	cd deb_test/qr-backup-${VERSION} && debuild -us -uc
 clean:
-	rm -rf dist
+	rm -rf dist deb_test
 install:
 	install -D qr-backup $(DESTDIR)$(PREFIX)$(BINDIR)/qr-backup
 	install -D -m 644 docs/qr-backup.1.man $(DESTDIR)$(PREFIX)$(MANDIR)/man1/qr-backup.1
