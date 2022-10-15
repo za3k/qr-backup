@@ -27,7 +27,7 @@
 - [Why does qr-backup restore to stdout? / why doesn't qr-backup extract tar files?](#why-does-qr-backup-restore-to-stdout-rather-than-the-original-filename)
 
 ### Troubleshooting
-- [My self-test is failing on Ubuntu](#my-self-test-is-failing-on-ubuntu)
+- [My self-test is failing on Debian/Ubuntu](#my-self-test-is-failing-on-ubuntu)
 - [How do I find the maximum dimensions of my printer?](#how-do-i-find-the-maximum-dimensions-of-my-printer)
 - [When I print a page, part of it is cut off](#when-i-print-a-page-part-of-it-is-cut-off)
 - [When I print the backup, the last page is rotated](#when-i-print-the-backup-the-last-page-is-rotated)
@@ -241,7 +241,7 @@ This avoids overwriting up the original files. For the same reason, multiple fil
 ## Troubleshooting
 
 ## My self-test is failing on Ubuntu
-The generated PDF is probably fine, but can't be read. Ubuntu has disabled ImageMagick working on PDFs for security reasons. This breaks qr-backup's self-test process. You have two options.
+The generated PDF is probably fine, but can't be read. Debian and Ubuntu have disabled ImageMagick working on PDFs for security reasons. This breaks qr-backup's self-test process. You have two options.
 
 1. Disable or modify the security policy. Check out StackOverflow for information of [why](https://askubuntu.com/questions/1081895/trouble-with-batch-conversion-of-png-to-pdf-using-convert) and [how to disable it](https://askubuntu.com/questions/1127260/imagemagick-convert-not-allowed) if you want.
 2. Test your restore by printing your backup.

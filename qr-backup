@@ -151,7 +151,7 @@ Please report any bugs at https://github.com/za3k/qr-backup/issues .
 
 Sometimes scanned images, including the original PDF, cannot be read successfully and the restore self-check fails. This appears to be a bug in **zbar**.
 
-On Ubuntu and certain other systems, the default system imagemagick policy prevents reading or writing PDFs. Since **qr-backup** depends on both, it will fail. **qr-backup** does its best to report this problem clearly.
+On Debian, Ubuntu and certain other systems, the default system imagemagick policy prevents reading or writing PDFs. Since **qr-backup** depends on both, it will fail. **qr-backup** does its best to report this problem clearly.
 
 It is possible to print barcodes so large or small your webcam or scanner cannot read them. Make sure to test your restore process when using non-default settings.
 
@@ -569,7 +569,7 @@ def program_present(program):
     return subprocess.call(["which", program], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
 
 def ubuntu_policy_problem():
-    """Tests for Ubuntu's policy of disabling all PDF conversion using ImageMagick"""
+    """Tests for Debian/Ubuntu's policy of disabling all PDF conversion using ImageMagick"""
     command = ["grep", "-F", "-s", "-q", '''<policy domain="coder" rights="none" pattern="PDF" />''', "/etc/ImageMagick-6/policy.xml"]
     return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
 
@@ -1433,11 +1433,15 @@ def self_test_restore(restore_cmd, input_path, output_path, output_buffer, origi
         test_restore_cmd = restore_cmd
 
     if not program_present("zbarimg"):
-        logging.warning("Skipping digital restore verification, because zbarimg is not available.")
+        logging.fatal("Skipping digital restore verification, because zbarimg is not available.")
+        #sys.exit(6)
     elif not program_present("convert"):
-        logging.warning("Skipping digital restore verification, because 'convert' is not available. convert is needed to work around a bug in zbarimg.")
+        # convert is needed to work around a bug in zbarimg
+        logging.fatal("Skipping digital restore verification, because 'convert' is not available.")
+        #sys.exit(5)
     elif ubuntu_policy_problem():
-        logging.warning("Skipping digital restore verification, because 'convert' is not available. Ubuntu forbids PDF conversion using imagemagick. More information at: https://github.com/za3k/qr-backup/tree/master/docs")
+        logging.fatal("Skipping digital restore verification, because 'convert' is not available. Debian/Ubuntu forbid PDF conversion using imagemagick. More information at: https://github.com/za3k/qr-backup/tree/master/docs")
+        #sys.exit(5)
     else:
         if use_buffers:
             logging.info("self-test using buffers")
