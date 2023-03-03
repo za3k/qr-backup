@@ -1021,7 +1021,7 @@ def main_backup(args):
             note, args = args[0], args[1:]
             notes.append("Additional notes:")
             for note_line in note.split("\n"):
-                for line in textwrap.wrap(note_line, width=60, replace_whitespace=False):
+                for line in textwrap.wrap(note_line, width=80, replace_whitespace=False):
                     notes.append(line)
         elif arg == "--num-copies":
             if len(args) < 1:
