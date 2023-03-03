@@ -1019,8 +1019,12 @@ def main_backup(args):
             if len(args) < 1:
                 show_help("--note requires one argument")
             note, args = args[0], args[1:]
-            for note_line in note.split("\n"):
-                for line in textwrap.wrap(note_line, width=60, replace_whitespace=False):
+            note = "Additional note: " + note
+            for i, note_line in enumerate(note.split("\n")):
+                initial_indent = ' '*4
+                if i == 0:
+                    initial_indent = ''
+                for line in textwrap.wrap(note_line, width=80, replace_whitespace=False, subsequent_indent=' '*4, initial_indent=initial_indent):
                     notes.append(line)
         elif arg == "--num-copies":
             if len(args) < 1:
@@ -1237,7 +1241,7 @@ def main_backup(args):
     nice_doc = f'\nThis backup was generated on {backup_date} with: {nice_cmd}'
     HOWTO += '\n'.join(textwrap.wrap(nice_doc, subsequent_indent='    ', width=150, replace_whitespace=False))
     if len(notes) > 0:
-        HOWTO += "\n" + "\n".join(["Additional note: " + note for note in notes])
+        HOWTO += "\n" + "\n".join(notes)
 
     # Print encyrption passphrase
     if encryption_passphrase is None:
