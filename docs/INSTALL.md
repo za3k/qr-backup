@@ -18,7 +18,7 @@ sudo make install
 - gnupg2
 - imagemagick
 - zbar
-- the DejaVu Sans font (fonts-dejavu on debian,  ttf-dejavu on arch. included.)
+- the DejaVu Sans Mono font (fonts-dejavu on debian,  ttf-dejavu on arch. included.)
 - python 3.6 or later
 - python-pillow
 - python-qrcode

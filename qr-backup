@@ -881,7 +881,7 @@ def generate_label(text, max_width, max_fontsize=24, min_fontsize=4):
     test_draw = PIL.ImageDraw.Draw(test_im)
 
     for fontsize in range(max_fontsize, min_fontsize-1, -1):
-        font = PIL.ImageFont.truetype("DejaVuSans.ttf", fontsize)
+        font = PIL.ImageFont.truetype("DejaVuSansMono.ttf", fontsize)
         _, _, width, height = test_draw.multiline_textbbox((0, 0), text, font=font)
         height += 4
         if width <= max_width:
@@ -894,7 +894,7 @@ def generate_label(text, max_width, max_fontsize=24, min_fontsize=4):
     #assert False
     logging.error("Label cannot fit in the requested width. Forcing output...")
 
-    font = PIL.ImageFont.truetype("DejaVuSans.ttf", min_fontsize)
+    font = PIL.ImageFont.truetype("DejaVuSansMono.ttf", min_fontsize)
     _, _, width, height = test_draw.multiline_textbbox((0, 0), text, font=font)
     height += 4
     im = PIL.Image.new(mode=IMAGE_MODE, size=(max_width, height), color=WHITE) # black-and-white
@@ -1280,7 +1280,7 @@ def main_backup(args):
     pages[0].save(tmp_pdf, format="pdf", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}", creationDate=backup_date, modDate=backup_date)
 
     if GENERATE_DOCS:
-        pass
+        do_checks = False
     elif use_stdout:
         logging.info("Outputting to stdout")
         # Write PDF to stdout

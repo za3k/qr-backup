@@ -38,7 +38,7 @@ BACKUP OPTIONS
 
        --encrypt generate, --encrypt PASSPHRASE
               Password-protect the backup.  If the passphrase is `generate', a
-              passphrase is automatically generated for you, which  you  would
+              passphrase  is  automatically generated for you, which you would
               need to store securely or you will be unable to unlock the data.
               Default: disabled
 
@@ -63,19 +63,19 @@ BACKUP OPTIONS
               the cover page.  Default: page
 
        --note TEXT
-              Add  a  special  note to the printout instructions.  Can be any-
+              Add a special note to the printout instructions.   Can  be  any-
               thing.  Default: no note
 
        --num-copies NUMBER
-              Print multiple copies of each QR code for redundancy.   Default:
+              Print  multiple copies of each QR code for redundancy.  Default:
               1
 
        --output FILENAME, -o FILENAME
-              Set  the  output  pdf path (redirecting stdout also works).  De-
+              Set the output pdf path (redirecting stdout  also  works).   De-
               fault: FILE.qr.pdf
 
        --page WIDTH_POINTS HEIGHT_POINTS
-              Sets the usable size of the paper on your printer.  This  should
+              Sets  the usable size of the paper on your printer.  This should
               NOT be 8.5 x 11 -- make sure to include margins.  Default: 500px
               x 600px
 
@@ -89,12 +89,12 @@ BACKUP OPTIONS
               x SCALE pixels.  Default: 5px
 
        --shuffle, --no-shuffle
-              Spread  QR codes across pages.  This can help prevent data loss.
-              Default: yes if erasure coding is enabled (default),  no  other-
+              Spread QR codes across pages.  This can help prevent data  loss.
+              Default:  yes  if erasure coding is enabled (default), no other-
               wise
 
        --skip-checks, --no-skip-checks
-              Skip  erasure  code  checks,  self-restore checks.  Default: not
+              Skip erasure code checks,  self-restore  checks.   Default:  not
               skipped
 
 RESTORE OPTIONS
@@ -108,7 +108,7 @@ RESTORE OPTIONS
               Force decompression (on/off).  Default: automatic
 
        --display, --no-display
-              For webcam scanning, (display/don't display) a  webcam  preview.
+              For  webcam  scanning, (display/don't display) a webcam preview.
               Default: display
 
        --encrypt PASSPHRASE, --no-encrypt
@@ -154,13 +154,13 @@ BUGS
        successfully and the restore self-check fails.  This appears  to  be  a
        bug in zbar.
 
-       On  Ubuntu  and  certain  other systems, the default system imagemagick
-       policy prevents reading or writing PDFs.  Since  qr-backup  depends  on
-       both,  it  will  fail.   qr-backup does its best to report this problem
-       clearly.
+       On  Debian, Ubuntu and certain other systems, the default system image-
+       magick policy prevents reading or writing PDFs.   Since  qr-backup  de-
+       pends  on  both,  it will fail.  qr-backup does its best to report this
+       problem clearly.
 
        It is possible to print barcodes so large or small your webcam or scan-
-       ner  cannot read them.  Make sure to test your restore process when us-
+       ner cannot read them.  Make sure to test your restore process when  us-
        ing non-default settings.
 
 COPYRIGHT
@@ -176,4 +176,4 @@ COPYRIGHT
 AUTHORS
        Zachary Vance.
 
-qr-backup 1.1.1                  October 2022                     QR-BACKUP(1)
+qr-backup 1.1.3                   August 2023                     QR-BACKUP(1)

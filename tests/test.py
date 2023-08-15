@@ -82,40 +82,42 @@ TESTS = [
 ]
 
 BLESSED_OUTPUT = {
-    '100b zeros':      '62e9ba9561c5f7d55e6005b49b134b3db25834aca900f1d4b1f8860083d1c851',
-    'default options': '62e9ba9561c5f7d55e6005b49b134b3db25834aca900f1d4b1f8860083d1c851', # This had better be the same!
+    # These two had better be the same!
+    '100b zeros': 'ed26a865598955e799e310c3bb38549b68ea951a11af2ae9c3a887ab427e9288',
+    'default options': 'ed26a865598955e799e310c3bb38549b68ea951a11af2ae9c3a887ab427e9288',
 
     # Options need to be checked by hand when updating
-    '--no-compress': 'f91656ae53d79aca5bbf018ec2c0cbe4d1b4ae37d26204103425932647f1b16b',
-    '--dpi': '2de57135237467259b04c20af969211ae853c8ff1e99ad22e0c38fc0f1cea29d',
-    # Encryption is non-deterministic
-    '--encrypt': None,
+    '--encrypt': None, # Encryption is non-deterministic
     "--encrypt-print-passphrase": None,
-    '--no-erasure-coding': '0406a41cc0f9b39a205152c95543f05b0b141ef3ca6981fb4b7be44dc0a87537',
-    '--error-correction L': 'bbbd60bafb23fdd17ce6625e321cdc8a97843fc1b7c0256000ee9381f5ab8552',
-    '--error-correction Q': '2387a6b5ff3d1f4b7c93f399fcf8778798c547e968e7ebb558c6d1a4c42df854',
-    '--error-correction H': '0cac40521b96fecc0631509bf0463270c05db8e3e2fb31995de2785e14c6e090',
-    '--filename': '6833abc92c168a266ebbd144400ce7eb1c2f6162722dcfd51f896cbeef471cb5',
-    '--instructions both': '5abcab841702e7ea4f5804b564d4e7ce4e84e6ae9e40665abfb394a450632226',
-    '--instructions cover': '0793f628f6ae2dd4c4bf5653af6f3a78f292979721a14b5c2ac5a35351b9795e',
-    '--instructions none': '69ace79dd3799a69f824c11e5423e303d09e2d47affc628532429cc1979eed6e',
-    '--note (1)': '2b8ef3cefebcb4395362661aed62518a312001b835f0b8a8d29eb1c03240fd08',
-    '--note (2)': '835a474a2bbff740e2c4671415cb980e668d26b505e1daf656384acf18a5c51b',
-    '--num-copies': 'e2b6e7e5c711887d213822b385a9f0d7cb63e23fb17a1861131410ff785a5df1',
-    '--page': '5aee0cb5a8b50bf1b41be9ee14ee263a4ad68b181c022751acc5c56247c2b8a1',
-    '--qr-version': '42aa1dee32c7c74ac3a059f748ed2e38af8d9546ebea35adc4edabc642a4559f',
-    '--scale': '0587bc699f3e483e1d712009d779faf888813ce857ca4bb0ce86548ec131d655',
-    '--no-shuffle': 'ab3997517850c665db39cffde95088f6d2e7bcce99f6f7fe2bdc1febacfc9690',
-    '1K zeros': '72acaeb01130fc72cc9daad380ce4b1d8e88f3d45a5ac5a76c2917a36cecb211',
 
-    '10K zeros': '14ed149a161ec19e8b4353a9c16c7f29805143ac75cb5b0a891e031166940f6b',
-    '100K zeros': '78e96dceabcaa4d07da3a21952d45f2235ffb9480000a6a62fc45bada939b3ae',
-    '100b random': 'c1773a62db5bda8e7600d7b99b7a69ad245692717d8519c966230f048b306333',
-    '1K random': '52fa6707761faae6a16bb0e16bcf32b94e8a895afc96ee354b6b32007227d19f',
-    '10K random': '3cc61fc17f4ad2b9419133fdf94690c4f022ceb63e837e51fe61bb184644053f',
-    '50K random': 'e196458408552a49a5fea40d23edf610354fcb5c87863f0dbff849066ecf8118',
-    '1K zeros, self-check': '72acaeb01130fc72cc9daad380ce4b1d8e88f3d45a5ac5a76c2917a36cecb211',
-    '1K random, self-check': '52fa6707761faae6a16bb0e16bcf32b94e8a895afc96ee354b6b32007227d19f',
+    '--no-compress': 'af282809a01c4a163372f9237b07e36e779f039c383a9b324d149674b07cfb40',
+    '--dpi': '0b9bab6921925979a3c4e88e59e51e6d63b5c0830a7c0ff77a7aad2475b4502c',
+
+    '--no-erasure-coding': 'c0a08d86b71280517d1ff3cf56c7bbb998fdece72e3f996546877b1ca1df485e',
+    '--error-correction L': 'b1043946459cb7367baa4214edd062671f6c78a6937e0287c7ca2f832ceacece',
+    '--error-correction Q': 'a3efa49a970267cadb5d4dd3f0fcb67d69bc5069d51809f16754f06dc74de286',
+    '--error-correction H': '2caa340d11e530a7e770caf71a3d0efee85defe4f5aec315b9c00bda6658089f',
+    '--filename': '9a61e8185bfcf9b9c3d2901baea7430b448ed6e0e03759619045b61a38e29d4e',
+    '--instructions both': '6ad4661009ebda82e6618f81caaa2fa43df1ac7d4a938ef3a7818588a8cc3c6b',
+    '--instructions cover': '452f3e23a7f71e1f9d1892d64910ff185f12799dc5093f29f085fe003bd69629',
+    '--instructions none': 'c66fdd3e1a7fd3107f95daab2d07b65cfe5e4b679fef5b2dca73d004baee494d',
+    '--note (1)': '6cdf1ba777d47c68a92eb1f49f35b8bd186431e639d560b6f1bacee2a3ee03e3',
+    '--note (2)': '8085233b46a4c61477fae0e9abea0c7f751f829763eaeaee36a3de3e6046ad9d',
+    '--num-copies': '7c705557390d346eb87bb08ea437ed8a42198b2ceeea296fbf891c1b20c695e2',
+    '--page': '8b3cfdb1e5b07ec72c552f6ab95ab39c04d419d23afad31b7b78fda395d435e9',
+    '--qr-version': '1add32b1947948f32d6baab525a5621930a46cc2438012953b8992e930adea70',
+    '--scale': '4cc28752038be68e69bd9b52ef3ab1aa310ce216be7af86e5cdfa0582c61e9b1',
+    '--no-shuffle': '10559366e0b5590660838b5c7893f1a3fb22fefab39e943dc667cfc34c82d6c9',
+
+    '1K zeros': '0f5da5bd812284e6a18f974af3187b442c4fed0cc595c231b96a5bdd4b0cd965',
+    '10K zeros': '68328734a28dcc05d9884641c591f0592920f5efb861062a17877a0557400e0c',
+    '100K zeros': 'b3fa3458bdf24863d1450d0c3b407c2b7f4847c2dc9d841b9a88c20e89f720b1',
+    '100b random': '59512f3c17bdeb122b652c4fb130e4094f21159d965bea73847177ac51237417',
+    '1K random': '7f9aeeea1ba41b6f6044bdeda64e87b626942dbead4ba409bc1a3f2195b91a2a',
+    '10K random': '63222f94ba30f2e887deb0a85ab032d0fe5c6e87737552d5b151c0b0556888b0',
+    '50K random': '4198a84b9a35f62108c26bd698295d1937d7257382e47db6f79ac8c8613a29a4',
+    '1K zeros, self-check': '0f5da5bd812284e6a18f974af3187b442c4fed0cc595c231b96a5bdd4b0cd965',
+    '1K random, self-check': '7f9aeeea1ba41b6f6044bdeda64e87b626942dbead4ba409bc1a3f2195b91a2a',
 }
 
 
