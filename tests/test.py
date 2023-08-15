@@ -1,4 +1,17 @@
 #!/bin/python3
+"""
+These are tests for qr-backup.
+
+Each test has three possible failure modes. In order of severity, they are
+(1) Correctness: Restore test (-r)
+    If we back up a file, and then restore it, is the output the same as the
+    original?
+(2) Performance: Speed regression test (-r-slow)
+    Does the backup and restore work quickly enough?
+(3) Reproducibility: Backup regression test (-b)
+    Is the output bitwise-identical to last time the tests were *blessed*
+        blessed: marked correct by hand
+"""
 import hashlib
 import math
 import random
@@ -69,40 +82,40 @@ TESTS = [
 ]
 
 BLESSED_OUTPUT = {
-    '100b zeros':      'c6308f52da054b6e9eb5ce02e5fced8889ac80fb45c0c2bd60c1522ddce8ba14',
-    'default options': 'c6308f52da054b6e9eb5ce02e5fced8889ac80fb45c0c2bd60c1522ddce8ba14', # This had better be the same!
+    '100b zeros':      '62e9ba9561c5f7d55e6005b49b134b3db25834aca900f1d4b1f8860083d1c851',
+    'default options': '62e9ba9561c5f7d55e6005b49b134b3db25834aca900f1d4b1f8860083d1c851', # This had better be the same!
 
     # Options need to be checked by hand when updating
-    '--no-compress': '1d8ec11472c4709fda63f3112a408db2da6c50a112dac8b0b4e0548cbea673f5',
-    '--dpi': 'd363989549c855e96e0dda855756829c6b1f8f11b8ffe854b02cf6104466c072',
+    '--no-compress': 'f91656ae53d79aca5bbf018ec2c0cbe4d1b4ae37d26204103425932647f1b16b',
+    '--dpi': '2de57135237467259b04c20af969211ae853c8ff1e99ad22e0c38fc0f1cea29d',
     # Encryption is non-deterministic
     '--encrypt': None,
     "--encrypt-print-passphrase": None,
-    '--no-erasure-coding': '6746f3ca2b75d7397eda1e63fab1167b5a4cde44fabe681d7a48b1486ed39cb6',
-    '--error-correction L': '8ab1475050ec7ebdd1d20ca46eb4a7083031922ebd1a573dba0ca80abb25f65a',
-    '--error-correction Q': 'ec943a14a116ca596bc8f58f3fe006e461d68dce788ea9926a822d659df292dc',
-    '--error-correction H': '1aad991555e4162d9610d8e989600da5e4031a8399a7082afb032e26e9891200',
-    '--filename': '8137004c57a545e386cc0459a4ac802b949601f3a640c8fd859415652dc1b0d4',
-    '--instructions both': '725cb6be5d80a6e76b0166fea3205daa61c3a2db5404f4f2802c5208f0a157d1',
-    '--instructions cover': '4878036208da2bb5b02a0aadc9473756f3e8e3898e3540cef75ea0f0dd186c99',
-    '--instructions none': 'ed80f71717140037506abe1d3aea05d97278d64d97b906abfa6d9ff85286fe33',
-    '--note (1)': 'cf904a8e4d87e3135ca81ce79c0e93dbdc4cb2775224426f99c27be5f5a18d78',
-    '--note (2)': 'ed9100f706bff9984d11fc6a845074c47b721856484c87344c7cabfc1e1a2c83',
-    '--num-copies': '19b89f0c9a770052b8ccdc00597056375306ae8e0278373bfd112406ff188f2e',
-    '--page': '0696073fe4d8c5c4d1bda3f52036952860dc033abfd5ab002dbcde037b27d0c4',
-    '--qr-version': '36f0ce65559ab37779a022c2492dbf1d029912fb9e740e92db053ee60ab6a1ed',
-    '--scale': '3bda1a470226c115a0f3ad85f47748b71d40a1183c65e79ef29afa876bb86bc3',
-    '--no-shuffle': 'ddbf172b473df1856a5015423446b4626f3dfdcaa644f290a4f84b06a5acb2a9',
+    '--no-erasure-coding': '0406a41cc0f9b39a205152c95543f05b0b141ef3ca6981fb4b7be44dc0a87537',
+    '--error-correction L': 'bbbd60bafb23fdd17ce6625e321cdc8a97843fc1b7c0256000ee9381f5ab8552',
+    '--error-correction Q': '2387a6b5ff3d1f4b7c93f399fcf8778798c547e968e7ebb558c6d1a4c42df854',
+    '--error-correction H': '0cac40521b96fecc0631509bf0463270c05db8e3e2fb31995de2785e14c6e090',
+    '--filename': '6833abc92c168a266ebbd144400ce7eb1c2f6162722dcfd51f896cbeef471cb5',
+    '--instructions both': '5abcab841702e7ea4f5804b564d4e7ce4e84e6ae9e40665abfb394a450632226',
+    '--instructions cover': '0793f628f6ae2dd4c4bf5653af6f3a78f292979721a14b5c2ac5a35351b9795e',
+    '--instructions none': '69ace79dd3799a69f824c11e5423e303d09e2d47affc628532429cc1979eed6e',
+    '--note (1)': '2b8ef3cefebcb4395362661aed62518a312001b835f0b8a8d29eb1c03240fd08',
+    '--note (2)': '835a474a2bbff740e2c4671415cb980e668d26b505e1daf656384acf18a5c51b',
+    '--num-copies': 'e2b6e7e5c711887d213822b385a9f0d7cb63e23fb17a1861131410ff785a5df1',
+    '--page': '5aee0cb5a8b50bf1b41be9ee14ee263a4ad68b181c022751acc5c56247c2b8a1',
+    '--qr-version': '42aa1dee32c7c74ac3a059f748ed2e38af8d9546ebea35adc4edabc642a4559f',
+    '--scale': '0587bc699f3e483e1d712009d779faf888813ce857ca4bb0ce86548ec131d655',
+    '--no-shuffle': 'ab3997517850c665db39cffde95088f6d2e7bcce99f6f7fe2bdc1febacfc9690',
+    '1K zeros': '72acaeb01130fc72cc9daad380ce4b1d8e88f3d45a5ac5a76c2917a36cecb211',
 
-    '1K zeros': 'd45df72505b649c41f6fb4a6aae31de1b6d6ee57f6d98141554bda186457b9b6',
-    '10K zeros': 'ad3c0e8eccaedc88786b51b168573c6bf952f923766e6875e1579050d070516f',
-    '100K zeros': 'bcefefc7441bcc341f4e2cda9a9f7f74b59bfa22b7a99bef4e6561999e465f66',
-    '100b random': 'ce704c5e984ac7b54a78e5da19d69a02e3ffa505d3ae0733759433108f599fca',
-    '1K random': '0541b29b91950263b3f0ff5936b1c994b3b576658257d79d7c49fa750a417619',
-    '10K random': '9728f552c43d02d7a609528af78b84279152fcbeee0b06272d69b504a57ed037',
-    '50K random': '93fcea86604b53e2c91e668303ef6a58c11a0782398171bb41c5a16370034015',
-    '1K zeros, self-check': 'd45df72505b649c41f6fb4a6aae31de1b6d6ee57f6d98141554bda186457b9b6',
-    '1K random, self-check': '0541b29b91950263b3f0ff5936b1c994b3b576658257d79d7c49fa750a417619',
+    '10K zeros': '14ed149a161ec19e8b4353a9c16c7f29805143ac75cb5b0a891e031166940f6b',
+    '100K zeros': '78e96dceabcaa4d07da3a21952d45f2235ffb9480000a6a62fc45bada939b3ae',
+    '100b random': 'c1773a62db5bda8e7600d7b99b7a69ad245692717d8519c966230f048b306333',
+    '1K random': '52fa6707761faae6a16bb0e16bcf32b94e8a895afc96ee354b6b32007227d19f',
+    '10K random': '3cc61fc17f4ad2b9419133fdf94690c4f022ceb63e837e51fe61bb184644053f',
+    '50K random': 'e196458408552a49a5fea40d23edf610354fcb5c87863f0dbff849066ecf8118',
+    '1K zeros, self-check': '72acaeb01130fc72cc9daad380ce4b1d8e88f3d45a5ac5a76c2917a36cecb211',
+    '1K random, self-check': '52fa6707761faae6a16bb0e16bcf32b94e8a895afc96ee354b6b32007227d19f',
 }
 
 
@@ -124,19 +137,19 @@ def do_test(test, new_blessed):
     if expected_sha is None: # Some tests are non-deterministic (ones using encryption)
         pass
     elif sha == expected_sha:
-        print_green("+b {} {}s".format(name, elapsed))
+        print_green("backup-no-regression {} {}s".format(name, elapsed))
     else:
-        print_red("-b {} {}s".format(name, elapsed))
+        print_red("backup-regression {} {}s".format(name, elapsed))
         print("  command:", qr_command)
         print("  result:", sha, "!=", expected_sha)
         failures += 1
         failed = True
     if elapsed > time_limit*2:
-        print_red("slow-b", name, "{}s, <2^{}".format(elapsed, power))
+        print_red("too-slow", name, "{}s, <2^{}".format(elapsed, power))
         failures += 1
         failed = True
     elif elapsed <= time_limit / 3:
-        print("fast-b", name, "{}s, <2^{}".format(elapsed, power))
+        print("too-fast", name, "{}s, <2^{}".format(elapsed, power))
         pass
 
     restore_options = DEFAULT_RESTORE_ARGS + restore_options
@@ -148,19 +161,19 @@ def do_test(test, new_blessed):
     elapsed, power = math.ceil(elapsed), math.ceil(math.log(elapsed, 2))
 
     if input_bytes == restored_bytes:
-        print_green("+r {} {}s".format(name, elapsed))
+        print_green("correct-restore {} {}s".format(name, elapsed))
         if expected_sha is not None and sha != expected_sha:
             new_blessed[name] = sha   
     else:
-        print_red("-r {} {}s".format(name, elapsed))
+        print_red("incorrect-restore {} {}s".format(name, elapsed))
         print("  command:", restore_command)
         #print(input_bytes, restored_bytes)
         failures += 1
     if elapsed > restore_time_limit*2:
-        print_red("slow-r", name, "{}s, <2^{}".format(elapsed, power))
+        print_red("too-slow", name, "{}s, <2^{}".format(elapsed, power))
         failures += 1
     elif elapsed <= restore_time_limit / 3:
-        print("fast-r", name, "{}s, <2^{}".format(elapsed, power))
+        print("too-fast", name, "{}s, <2^{}".format(elapsed, power))
         pass
 
     return failures, sha
