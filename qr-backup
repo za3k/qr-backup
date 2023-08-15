@@ -1068,7 +1068,7 @@ def main_backup(args):
     if verbose:
         logging.basicConfig(format=LOGGING_FORMAT, level=logging.INFO)
     else:
-        logging.basicConfig(format=LOGGING_FORMAT, level=logging.FATAL)
+        logging.basicConfig(format=LOGGING_FORMAT, level=logging.WARNING)
     # Figure out input paths, output paths, and restore filename
 
     # Input: stdin, tarfile, or single file?
@@ -1433,14 +1433,14 @@ def self_test_restore(restore_cmd, input_path, output_path, output_buffer, origi
         test_restore_cmd = restore_cmd
 
     if not program_present("zbarimg"):
-        logging.fatal("Skipping digital restore verification, because zbarimg is not available.")
+        logging.warning("Skipping digital restore verification, because zbarimg is not available.")
         #sys.exit(6)
     elif not program_present("convert"):
         # convert is needed to work around a bug in zbarimg
-        logging.fatal("Skipping digital restore verification, because 'convert' is not available.")
+        logging.warning("Skipping digital restore verification, because 'convert' is not available.")
         #sys.exit(5)
     elif ubuntu_policy_problem():
-        logging.fatal("Skipping digital restore verification, because 'convert' is not available. Debian/Ubuntu forbid PDF conversion using imagemagick. More information at: https://github.com/za3k/qr-backup/tree/master/docs")
+        logging.warning("Skipping digital restore verification, because 'convert' forbids PDF conversion. More information at: https://github.com/za3k/qr-backup/blob/master/docs/FAQ.md#my-self-test-is-failing-on-ubuntu")
         #sys.exit(5)
     else:
         if use_buffers:
