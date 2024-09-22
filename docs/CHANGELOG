@@ -1,5 +1,6 @@
 (unreleased)
 - Fixed -v output to include status codes
+- Document OS X install
 
 v1.1.3
 - Added bash completion

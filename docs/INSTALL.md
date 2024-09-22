@@ -2,8 +2,15 @@
 ## Arch Linux
     yay -S qr-backup
 
-## Other Linux
-1. Install CLI dependencies: gnupg2, imagemagick, and zbar
+## OS X (Mac)
+1. Install DejaVuSansMono.ttf by double-clicking it
+2. Install python packages:
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+
+## Other Linux, BSD
+1. Install CLI dependencies: ghostscript, gnupg2, imagemagick, and zbar
 2. Run the following:
 
 ```
@@ -15,6 +22,7 @@ sudo make install
 
 ## Dependencies
 - **A Linux computer and knowledge of how to use the command line**
+- ghostscript
 - gnupg2
 - imagemagick
 - zbar
