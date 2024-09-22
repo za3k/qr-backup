@@ -228,9 +228,9 @@ Command used: {nice_cmd}
 {notes}
 == How to restore ==
 
-You will need access to a Linux computer and a command line. You will also need to install 'zbar' and imagemagick.
+You will need access to a Linux, BSD, or Mac/OSX computer and a command line. You will also need to install 'zbar' and imagemagick.
 
-To restore using a webcam and the Linux command line:
+To restore using a webcam and the command line:
   Step 1 (scan): zbarcam --raw | tee /tmp/qrs | cut -c1-{code_end}
     Scan each code at least once in any order'
   Step 2 (restore): {howto_restore_cmd} >{restore_file}'
@@ -239,7 +239,7 @@ To restore using a webcam and the Linux command line:
 To restore using a webcam and qr-backup:
   Step 1: qr-backup --restore
 
-To restore using a scanner and the Linux command line:
+To restore using a scanner and the command line:
   Step 1 (scan): Scan the images with your scanner. Save them as any image format, it doesn't matter.
   Step 2 (scan): zbarimg -q --raw *.png >/tmp/qrs
   Step 3 (restore): {howto_restore_cmd} >{restore_file}
@@ -252,7 +252,7 @@ To restore using a scanner and qr-backup:
 
 (You can probably ignore this section)
 
-If you don't have access to the Linux command line, and you don't have access to qr-backup, here is an explanation of how the backup is structured.
+If you don't have access to the command line, and you don't have access to qr-backup, here is an explanation of how the backup is structured.
 You will need a computing device and a great deal of technical expertise to restore this way.
 
 - First, each QR code is scanned. QR is a 2D "bar"code in common use.
@@ -1232,7 +1232,7 @@ def main_backup(args):
     HOWTO += '\nTo restore this file using qr-backup:'
     HOWTO += f'\n  Step 1 (webcam): qr-backup --restore'
     HOWTO += f'\n  Step 1 (scanner): qr-backup --restore IMAGE1 IMAGE2 ...'
-    HOWTO += '\nTo restore this file from the command line in Linux:'
+    HOWTO += '\nTo restore this file from the command line:'
     HOWTO += f'\n  Step 1 (webcam option): zbarcam --raw | tee /tmp/qrs | cut -c1-{code_digits+1} # Scan each code at least once in any order'
     HOWTO += f'\n  Step 1 (scanner option): zbarimg -q --raw *.png >/tmp/qrs'
     howto_restore_cmd = restore_cmd.replace("sort -u", "sort -u /tmp/qrs")
@@ -1432,7 +1432,7 @@ def generate_docs(pages):
 def self_test_restore(restore_cmd, input_path, output_path, output_buffer, original_content, use_buffers, sha256sum, use_encryption, encryption_passphrase, expected_qrs):
     if use_encryption:
         test_restore_cmd = restore_cmd.replace("gpg --decrypt", "gpg --decrypt --no-symkey-cache --batch --passphrase '{}'".format(encryption_passphrase))
-        logging.info("Restore command used in Linux CLI test: " + test_restore_cmd)
+        logging.info("Restore command used in command-line test: " + test_restore_cmd)
     else:
         test_restore_cmd = restore_cmd
 
@@ -1449,14 +1449,14 @@ def self_test_restore(restore_cmd, input_path, output_path, output_buffer, origi
     else:
         if use_buffers:
             logging.info("self-test using buffers")
-            logging.info("Performing linux CLI restore check...")
+            logging.info("Performing command-line restore check...")
             # convert -density 300 is to work around errors in zbarimg. I offered an upstream patch as https://github.com/mchehab/zbar/pull/227
             linux_test_command = "convert -density {} pdf:- tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | {}".format(CONVERSION_DENSITY, test_restore_cmd)
             linux_test_rate_command = "convert -density {} pdf:- tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | wc -l".format(CONVERSION_DENSITY, test_restore_cmd)
-            logging.info("Linux CLI command was: {}".format(linux_test_command))
+            logging.info("Command-line command was: {}".format(linux_test_command))
             linux_test = subprocess.run(linux_test_command, shell=True, capture_output=True, input=output_buffer)
             linux_success = linux_test.returncode==0 and linux_test.stdout == original_content
-            logging.info("Linux CLI exit code was: {}".format(linux_test.returncode))
+            logging.info("Command-line exit code was: {}".format(linux_test.returncode))
             logging.info("Test command was: {}".format(linux_test_rate_command))
             linux_test_rate = subprocess.run(linux_test_rate_command, shell=True, capture_output=True, input=output_buffer)
 
@@ -1470,12 +1470,13 @@ def self_test_restore(restore_cmd, input_path, output_path, output_buffer, origi
             logging.info("Self-test exit code was: {}".format(self_test.returncode))
         else:
             logging.info("self-test using files")
-            logging.info("Performing linux CLI restore check...")
+            logging.info("Performing command-line restore check...")
             linux_test_command = "convert -density {} {} tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | {} | cmp {}".format(CONVERSION_DENSITY, output_path, test_restore_cmd, input_path)
             linux_test_rate_command = "convert -density {} {} tif:- | zbarimg --raw -q -Sdisable -Sqrcode.enable - | wc -l".format(CONVERSION_DENSITY, output_path, test_restore_cmd)
-            logging.info("Linux CLI command was: {}".format(linux_test_command))
-            linux_success = (subprocess.call(linux_test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
-            logging.info("Linux CLI exit code was: {}".format(linux_success))
+            logging.info("Command-line command was: {}".format(linux_test_command))
+            linux_returncode = subprocess.call(linux_test_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            linux_success = (linux_returncode == 0)
+            logging.info("Command-line exit code was: {}".format(linux_returncode))
             logging.info("Test command was: {}".format(linux_test_rate_command))
             linux_test_rate = subprocess.run(linux_test_rate_command, shell=True, capture_output=True)
 
@@ -1483,9 +1484,10 @@ def self_test_restore(restore_cmd, input_path, output_path, output_buffer, origi
             self_test_command = ["python3", sys.argv[0], "--restore", "--sha256", sha256sum, output_path]
             if use_encryption:
                 self_test_command += ["--encrypt", encryption_passphrase]
-            self_test_success = (subprocess.call(self_test_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
+            self_test_returncode = subprocess.call(self_test_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self_test_success = (self_test_returncode)
             logging.info("Self-test command was: {}".format(self_test_command))
-            logging.info("Self-test exit code was: {}".format(self_test_success))
+            logging.info("Self-test exit code was: {}".format(self_test_returncode))
 
         qrs_read = int(linux_test_rate.stdout)
         qrs_fraction_read = qrs_read / expected_qrs
@@ -1495,9 +1497,9 @@ def self_test_restore(restore_cmd, input_path, output_path, output_buffer, origi
             sys.exit(3)
         elif not linux_success:
             if qrs_fraction_read < ZBAR_WARNING_THRESHOLD:
-                logging.info("!!Automatic digital restore verification FAILED (linux CLI). This indicates a bug in zbarimg, most likely. Please report this to the author at https://github.com/za3k/qr-backup/issues")
+                logging.info("!!Automatic digital restore verification FAILED (command-line). This indicates a bug in zbarimg, most likely. Please report this to the author at https://github.com/za3k/qr-backup/issues")
             else:
-                logging.info("!!Automatic digital restore verification FAILED (linux CLI). This indicates a bug in qr-backup (more likely) or zbarimg. Please report this to the author at https://github.com/za3k/qr-backup/issues")
+                logging.info("!!Automatic digital restore verification FAILED (command-line). This indicates a bug in qr-backup (more likely) or zbarimg. Please report this to the author at https://github.com/za3k/qr-backup/issues")
             #sys.exit(3)
         else:
             logging.info("Automatic digital restore verification succeeded.")
