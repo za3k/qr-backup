@@ -28,7 +28,7 @@ deb: dist/qr-backup-${VERSION}.tar.gz
 	mkdir -p dist/debian
 	cp dist/qr-backup-${VERSION}.tar.gz dist/debian/qr-backup_${VERSION}.orig.tar.gz
 	cd dist/debian && tar xf qr-backup_${VERSION}.orig.tar.gz
-	cp -lr package/debian dist/debian/qr-backup-${VERSION}/debian
+	cp -lr installers/debian dist/debian/qr-backup-${VERSION}/debian
 	cd dist/debian/qr-backup-${VERSION} && debuild -us -uc
 clean:
 	rm -rf dist deb_test
