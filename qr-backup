@@ -53,7 +53,7 @@ BACKUP_OPTIONS = [
     (("--instructions page|cover|both|none",), "page", "Sets how frequently the instructions are printed. If 'cover' or 'both' is selected, more verbose instructions will be printed on the cover page."),
     (("--note TEXT",), "no note", "Add a special note to the printout instructions. Can be anything."),
     (("--num-copies NUMBER",), "1", "Print multiple copies of each QR code for redundancy."),
-    (("--output FILENAME", "-o FILENAME"), "FILE.qr.pdf", "Set the output pdf path (redirecting stdout also works)."),
+    (("--output FILENAME", "-o FILENAME"), "FILE.qr.tif", "Set the output tif path (redirecting stdout also works)."),
     (("--page WIDTH_POINTS HEIGHT_POINTS",), "500px x 600px", "Sets the usable size of the paper on your printer. This should NOT be 8.5 x 11 -- make sure to include margins."),
     (("--qr-version VERSION",), "10", "Uses QR codes, version VERSION. Versions range from 1-40. The bigger the version, the harder to scan but the more data per code."),
     (("--scale SCALE",), "5px", "Scale QR codes so that each small square in the QR code is SCALE x SCALE pixels."),
@@ -77,9 +77,10 @@ BOTH_OPTIONS = [
     (("--version", "-V"), None, "Print the verison and immediately exit."),
 ]
 
-HELP='''Usage: qr-codes.py [OPTIONS] FILE [FILE...]
-               qr-codes.py --restore [OPTIONS]
-               qr-codes.py --restore [OPTIONS] IMAGE [IMAGE ...]
+HELP='''Usage: qr-backup [OPTIONS] FILE [FILE...]
+               qr-backup --restore [OPTIONS]
+               qr-backup --restore [OPTIONS] IMAGE [IMAGE ...]
+
 Convert a binary file to a paper .pdf backup of QR codes. With '--restore', read the QR codes in the paper backup using a webcam or scanner, to re-create the original file.
 
 Restore directions are included in the PDF, and do not require qr-backup. Make sure to test that you can actually read the QR size you select.
@@ -1106,16 +1107,16 @@ def main_backup(args):
         use_stdout = True
         output_path = "-"
     else:
-        use_stdout = (output_path is None or output_path == "-") and not sys.stdout.isatty()
+        use_stdout = (output_path == "-") and not sys.stdout.isatty()
     if output_path is None:
         if use_stdout:
             output_path = "-"
         elif use_stdin:
-            output_path = f"{restore_file or 'stdin'}.qr.pdf" # Local directory
+            output_path = f"{restore_file or 'stdin'}.qr.tif" # Local directory
         elif len(input_paths) == 1:
-            output_path = f"{input_paths[0]}.qr.pdf" # Same directory
+            output_path = f"{input_paths[0]}.qr.tif" # Same directory
         elif use_tar:
-            output_path = f"{restore_file}.qr.pdf" # Local directory
+            output_path = f"{restore_file}.qr.tif" # Local directory
         else:
             assert False
 
@@ -1276,20 +1277,20 @@ def main_backup(args):
     )
 
     # PIL's pdf writer needs to mmap, so it can't accept sys.stdout directly
-    tmp_pdf = io.BytesIO()
-    pages[0].save(tmp_pdf, format="pdf", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}", creationDate=backup_date, modDate=backup_date)
+    tmp_file = io.BytesIO()
+    pages[0].save(tmp_file, format="tiff", compression="tiff_lzw", save_all=True, append_images=pages[1:], resolution=dpi, producer="qr-backup", title=f"qr-backup paper backup of {restore_file} with sha256 {sha256sum} and length {original_len}", creationDate=backup_date, modDate=backup_date)
 
     if GENERATE_DOCS:
         do_checks = False
     elif use_stdout:
         logging.info("Outputting to stdout")
         # Write PDF to stdout
-        sys.stdout.buffer.write(tmp_pdf.getbuffer())
+        sys.stdout.buffer.write(tmp_file.getbuffer())
     else:
         logging.info("Outputting: {}".format(output_path))
         # Write PDF to file
         with open(output_path, "wb") as f:
-            f.write(tmp_pdf.getbuffer())
+            f.write(tmp_file.getbuffer())
 
     # Self-test
     if do_checks:
@@ -1297,7 +1298,7 @@ def main_backup(args):
             restore_cmd,
             input_path=input_paths[0],
             output_path=output_path,
-            output_buffer=tmp_pdf.getbuffer(),
+            output_buffer=tmp_file.getbuffer(),
             original_content=original_content,
             use_buffers=use_tar or use_stdout or use_stdin,
             sha256sum=sha256sum,
