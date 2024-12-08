@@ -1314,13 +1314,13 @@ def main_backup(args):
 
 def generate_pdf(qrs, dpi, page_w_points, page_h_points, page_instructions, cover_instructions, qr_padding, passphrase_instructions, minimize_size, _qr_version, _len_content, _original_len):
     # Calculate QR padding produced by qrcode module
-    example_qr = qrs[0].qr.make_image().copy()
+    example_qr = qrs[0].qr.make_image().get_image().copy()
     qr_raw_w_pixel, qr_raw_h_pixel = example_qr.size
 
     # Output QR codes with labels to Pillow Image objects
     labeled = []
     for i, qr in enumerate(qrs):
-        img = qr.qr.make_image()
+        img = qr.qr.make_image().get_image()
         labeled.append(add_label(img, qr.label))
     logging.info(f"{len(qrs)} qr codes (at version {_qr_version}) total")
 
