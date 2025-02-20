@@ -6,6 +6,7 @@ People who provided code:
 
 - [acuteangle](https://github.com/acuteaangle), nix packaging
 - [Antoine Beaupré](https://github.com/anarcat), debian packaging; notes
+- [Julian Rüth](https://github.com/saraedum), bugfix
 - [vonProteus](https://github.com/vonProteus), docker support; documentation; OS X testing
 - [VzxPLnHqr](https://github.com/VzxPLnHqr), nix packaging
 

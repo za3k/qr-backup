@@ -1,5 +1,7 @@
 (unreleased)
 - ("Added continuous integration" when done.)
+- Fixed bugs
+    - Corrected return code when --check-restore is enabled [(PR #51)](https://github.com/za3k/qr-backup/pull/61)
 
 v1.1.4, 2025-03-24
 - Improved note display
