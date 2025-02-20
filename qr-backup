@@ -1485,7 +1485,7 @@ def self_test_restore(restore_cmd, input_path, output_path, output_buffer, origi
             if use_encryption:
                 self_test_command += ["--encrypt", encryption_passphrase]
             self_test_returncode = subprocess.call(self_test_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            self_test_success = (self_test_returncode)
+            self_test_success = self_test_returncode == 0
             logging.info("Self-test command was: {}".format(self_test_command))
             logging.info("Self-test exit code was: {}".format(self_test_returncode))
 
