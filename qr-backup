@@ -1191,6 +1191,9 @@ def main_backup(args):
     # (Gzip) Compression
     if use_compression:
         content = gzip.compress(content, mtime=0)
+        content = bytearray(content)
+        content[9] = 255
+        content = bytes(content)
 
     # Encryption
     if use_encryption:
