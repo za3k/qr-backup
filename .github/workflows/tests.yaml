@@ -5,9 +5,14 @@ on:
   - pull_request
 
 jobs:
-  linux:
+  test:
     name: Run tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
