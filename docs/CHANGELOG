@@ -1,5 +1,5 @@
 (unreleased)
-- ("Added continuous integration" when done.)
+- Added continuous integration
 - Fixed bugs
     - Corrected return code when --check-restore is enabled [(PR #51)](https://github.com/za3k/qr-backup/pull/61)
 
