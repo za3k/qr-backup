@@ -17,6 +17,7 @@ import math
 import random
 import subprocess
 import sys
+import textwrap
 import time
 
 def zeros(length):
@@ -32,6 +33,10 @@ def print_red(x):
     print(RED + x + ENDC)
 def print_green(x):
     print(GREEN + x + ENDC)
+
+def program_present(program):
+    """Return True or False depending on whether the program is found in the environment"""
+    return subprocess.call(["which", program], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
 
 DEFAULT_ARGS = ["--skip-checks", "-", "--backup-date", "2022-09-22"]
 DEFAULT_RESTORE_ARGS = ["-"]
@@ -138,6 +143,11 @@ def do_test(test, new_blessed):
 
     if expected_sha is None: # Some tests are non-deterministic (ones using encryption)
         pass
+    elif result.returncode != 0:
+        print_red("failing-command {} {}s".format(name, elapsed))
+        print_red(textwrap.indent(result2.stderr.decode("utf8"), "  "))
+        failures += 1
+        return failures, None
     elif sha == expected_sha:
         print_green("backup-no-regression {} {}s".format(name, elapsed))
     else:
@@ -145,11 +155,10 @@ def do_test(test, new_blessed):
         print("  command:", qr_command)
         print("  result:", sha, "!=", expected_sha)
         failures += 1
-        failed = True
+
     if elapsed > time_limit*2:
         print_red("too-slow", name, "{}s, <2^{}".format(elapsed, power))
         failures += 1
-        failed = True
     elif elapsed <= time_limit / 3:
         print("too-fast", name, "{}s, <2^{}".format(elapsed, power))
         pass
@@ -162,7 +171,12 @@ def do_test(test, new_blessed):
     restored_bytes = result2.stdout
     elapsed, power = math.ceil(elapsed), math.ceil(math.log(elapsed, 2))
 
-    if input_bytes == restored_bytes:
+    if result2.returncode != 0:
+        print_red("failing-command {} {}s".format(name, elapsed))
+        print_red(textwrap.indent(result2.stderr.decode("utf8"), "  "))
+        failures += 1
+        return failures, None
+    elif input_bytes == restored_bytes:
         print_green("correct-restore {} {}s".format(name, elapsed))
         if expected_sha is not None and sha != expected_sha:
             new_blessed[name] = sha   
@@ -182,6 +196,10 @@ def do_test(test, new_blessed):
 
 
 if __name__ == "__main__":
+    if not program_present("zbarimg"):
+        print_red("To run tests, install the packages: zbar")
+        sys.exit(6)
+
     failures = 0
     new_blessed = {}
     for test in TESTS:
