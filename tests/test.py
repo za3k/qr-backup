@@ -3,15 +3,85 @@
 These are tests for qr-backup.
 
 Each test has three possible failure modes. In order of severity, they are
-(1) Correctness: Restore test (-r)
+(1) Correctness: Restore test (incorrect-restore)
     If we back up a file, and then restore it, is the output the same as the
     original?
-(2) Performance: Speed regression test (-r-slow)
+(2) Performance: Speed regression test (too-slow)
     Does the backup and restore work quickly enough?
-(3) Reproducibility: Backup regression test (-b)
+
+    Note: too-fast can also be reported, which means you have improved the
+          test speed, and need to update the "target" running time
+(3) Reproducibility: Backup regression test (backup-regession)
     Is the output bitwise-identical to last time the tests were *blessed*
         blessed: marked correct by hand
 """
+
+REPRODUCIBILITY_FAILING = """
+This is the most basic reproducibility test, so something has changed.
+
+Reproducibility (bitwise-identical output) is not actually a
+requirement for qr-backup as long as restores continue to work across
+versions. Rather, it's a first check. If there were no changes, a
+human being doesn't even have to look.
+
+For this reason, it's nice if we can make the output never change in
+any way, because then we don't need human judgement.
+
+Because of this nice property, you should default to considering it
+worth fixing if reproducibilty tests fail (rather than rubber-stamping changes).
+
+To narrow down what changed, compare the ouput of zeros.pdf (we just generated
+it for you) with the file tests/regression.pdf (a known-good version).
+
+My suggested process to get started:
+
+1. 'git checkout' the last commit in which tests/regression.pdf was last
+   touched, and re-generate a new version using
+
+       dd if=/dev/zero count=1 bs=100 | python3 qr-backup - >regression2.pdf
+   
+   If the output is identical to regression.pdf, this confirms the change was
+   in the qr-backup repository.
+
+   Either way, proceed with the steps 2 and on.
+
+   If the output is NOT identical, it's likely there was a change in some
+   dependency, instead. For example, zbar, PIL, qrcode, reedsolo, tar,
+   libz, etc.
+
+   If possible, qr-backup would like to have reproducible output
+   even in the face of library changes.
+
+   Another possibility is differing output across runs.
+   We once accidentally embedded the date in pdfs made during test runs.
+
+2. Convert each of zeros.pdf and tests/regession.pdf to a png. Compare them
+   using a visual diff tool online.
+
+   Have the QR codes changed, the instructions, or neither?
+
+   If neither, the PDF output phase is likely not reproducible.
+
+3. If the textuual instructions changed this commit (and nothing else!)
+   you can safely bless the new output.
+
+   If something else changed too, split the commit in half.
+
+4. If the QR codes have changed, what changed about the data inside?
+   Use zbarimg to extract data from both PDFs and compare with 'diff'.
+
+   If the data is the same, the QR output is likely not reproducible.
+
+After carefully understanding why reproducibility has failed, and deciding
+it's a good tradeoff and we can restore past backups, you can choose to
+bless the new output.
+
+The code to do this is printed at the bottom of the tests.
+
+Once you bless output, make sure that tests pass! If output is
+not consistent even between runs, this is a bug in qr-backup.
+"""
+
 import hashlib
 import math
 import random
@@ -141,6 +211,9 @@ def do_test(test, new_blessed):
     sha = hashlib.sha256(output_bytes).hexdigest()
     elapsed, power = math.ceil(elapsed), math.ceil(math.log(elapsed, 2))
 
+    # TODO: Check the data inside the QR-codes as a second, much-less-flaky regression suite.
+    # Note that "regression" should really be called "reproducibility"
+
     if expected_sha is None: # Some tests are non-deterministic (ones using encryption)
         pass
     elif result.returncode != 0:
@@ -155,6 +228,10 @@ def do_test(test, new_blessed):
         print("  command:", qr_command)
         print("  result:", sha, "!=", expected_sha)
         failures += 1
+
+        if name == '100b zeros':
+            print_red(REPRODUCIBILITY_FAILING)
+            subprocess.run("dd if=/dev/zero count=1 bs=100 2>/dev/null | python3 qr-backup - >zeros.pdf", shell=True)
 
     if elapsed > time_limit*2:
         print_red("too-slow", name, "{}s, <2^{}".format(elapsed, power))
@@ -218,4 +295,6 @@ if __name__ == "__main__":
         print("}")
 
     print("{} failures".format(failures))
+    if failures > 0:
+        print_red(__doc__)
     sys.exit(1 if failures > 0 else 0)

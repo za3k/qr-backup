@@ -1228,6 +1228,11 @@ def main_backup(args):
     logging.info(f"Restore command is: {restore_cmd}")
 
     # Instructions depend on the command line options, and the content of the file
+    #
+    # NOTE: Changing any of the below will mean you need to re-bless the
+    # reproducibility results. For safety split the changes in half -- make sure
+    # the test pass without updated instructions, then change the instructions and
+    # tests and nothing else in a second commit.
     HOWTO = f'This is a paper backup of a computer file called: {restore_file}'
     HOWTO += '\nTo restore this file using qr-backup:'
     HOWTO += f'\n  Step 1 (webcam): qr-backup --restore'
