@@ -1,9 +1,9 @@
 Output of `qr-backup --help`:
 
 ```
-Usage: qr-codes.py [OPTIONS] FILE [FILE...]
-               qr-codes.py --restore [OPTIONS]
-               qr-codes.py --restore [OPTIONS] IMAGE [IMAGE ...]
+Usage: qr-backup [OPTIONS] FILE [FILE...]
+       qr-backup --restore [OPTIONS]
+       qr-backup --restore [OPTIONS] IMAGE [IMAGE ...]
 Convert a binary file to a paper .pdf backup of QR codes. With '--restore', read
 the QR codes in the paper backup using a webcam or scanner, to re-create the
 original file.
@@ -12,6 +12,8 @@ Restore directions are included in the PDF, and do not require qr-backup. Make
 sure to test that you can actually read the QR size you select.
 
 Options:
+    --help, -h
+        Print a help message.
     --verbose, -v
         Print more detailed information during run.
     --version, -V
@@ -19,12 +21,12 @@ Options:
 
 
 Backup options:
-    --dpi DPI
-        Sets the print resolution of your printer.
-        Default: 300
     --compress, --no-compress
         This gives a more compact backup, but partial recovery is impossible.
         Default: compressed
+    --dpi DPI
+        Sets the print resolution of your printer.
+        Default: 300
     --encrypt generate, --encrypt PASSPHRASE
         Password-protect the backup. If the passphrase is 'generate', a
         passphrase is automatically generated for you, which you would need to
@@ -79,32 +81,32 @@ Backup options:
 
 
 Restore options:
-    --code-count-erasure COUNT, -c COUNT
+    --code-count-erasure COUNT
         Specify the number of erasure QR codes.
         Default: automatic
-    --code-count-normal COUNT, -c COUNT
+    --code-count-normal COUNT
         Specify the number of normal QR codes.
         Default: automatic
     --compress, --no-compress
         Force decompression (on/off).
         Default: automatic
+    --display, --no-display
+        For webcam scanning, (display/don't display) a webcam preview.
+        Default: display
     --encrypt PASSPHRASE, --no-encrypt
         Force decryption (on/off) and give the passphrase if decrypting.
         Default: automatic
     --image-restore
         Force image-based (scanner) restore.
         Default: automatic
-    --display, --no-display
-        For webcam scanning, (display/don't display) a webcam preview.
-        Default: display
     --output FILENAME, -o FILENAME
         Set the restore file path.
         Default: stdout
     --sha256 SHA256
-        Include a sha256sum to check the file.
+        Include a sha256sum to check the file. Giving the initial part of the
+        sha256sum does a partial check.
         Default: no check, prints checksum to stderr
     --webcam-restore
         Force webcam-based restore.
         Default: automatic
-
 ```

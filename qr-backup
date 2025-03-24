@@ -77,9 +77,9 @@ BOTH_OPTIONS = [
     (("--version", "-V"), None, "Print the verison and immediately exit."),
 ]
 
-HELP='''Usage: qr-codes.py [OPTIONS] FILE [FILE...]
-               qr-codes.py --restore [OPTIONS]
-               qr-codes.py --restore [OPTIONS] IMAGE [IMAGE ...]
+HELP='''Usage: qr-backup [OPTIONS] FILE [FILE...]
+       qr-backup --restore [OPTIONS]
+       qr-backup --restore [OPTIONS] IMAGE [IMAGE ...]
 Convert a binary file to a paper .pdf backup of QR codes. With '--restore', read the QR codes in the paper backup using a webcam or scanner, to re-create the original file.
 
 Restore directions are included in the PDF, and do not require qr-backup. Make sure to test that you can actually read the QR size you select.

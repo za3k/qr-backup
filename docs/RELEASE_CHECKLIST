@@ -1,0 +1,12 @@
+1. Make sure tests are currently passing
+2. If needed, update example.png, MAN.txt, and qr-backup.1.man, and USAGE.md
+   a. ./qr-backup --generate-docs docs/example.txt
+   b. USAGE.md needs updated manually
+3. Update CHANGELOG and CONTRIBUTORS
+4. Update the version number in the code and CHANGELOG.
+5. Commit and tag the code.
+5. In github, generate a release from the tag.
+    a. Copy the release notes from CHANGELOG
+    b. Build the debian binary and attach it to the release
+    c. Update the arch package
+
