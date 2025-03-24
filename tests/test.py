@@ -82,6 +82,7 @@ Once you bless output, make sure that tests pass! If output is
 not consistent even between runs, this is a bug in qr-backup.
 """
 
+import functools
 import hashlib
 import math
 import random
@@ -89,6 +90,8 @@ import subprocess
 import sys
 import textwrap
 import time
+
+only_once = functools.cache # As long as it's called on a no-argument function :)
 
 def zeros(length):
     return b'\0'*length
@@ -158,43 +161,49 @@ TESTS = [
 
 BLESSED_OUTPUT = {
     # These two had better be the same!
-    '100b zeros': 'ed26a865598955e799e310c3bb38549b68ea951a11af2ae9c3a887ab427e9288',
-    'default options': 'ed26a865598955e799e310c3bb38549b68ea951a11af2ae9c3a887ab427e9288',
+    # If you ever bless a new version, make sure to overwrite tests/regression.pdf with zeros.pdf
+    '100b zeros': '4d2cd56bc5a890f2a87419ceec58d29cf9b576b14020ebbdabdd75597827add7',
+    'default options': '4d2cd56bc5a890f2a87419ceec58d29cf9b576b14020ebbdabdd75597827add7',
 
     # Options need to be checked by hand when updating
     '--encrypt': None, # Encryption is non-deterministic
     "--encrypt-print-passphrase": None,
 
-    '--no-compress': 'af282809a01c4a163372f9237b07e36e779f039c383a9b324d149674b07cfb40',
-    '--dpi': '0b9bab6921925979a3c4e88e59e51e6d63b5c0830a7c0ff77a7aad2475b4502c',
+    '--no-compress': 'f4aaa755da4d6b84ff30da1880f40d83171f97b7531b1915afbd7554867f48b3',
+    '--dpi': '22e15a09b519d543c209286636c6faf52c5fc800bab611487d4a47a2a477160b',
 
-    '--no-erasure-coding': 'c0a08d86b71280517d1ff3cf56c7bbb998fdece72e3f996546877b1ca1df485e',
-    '--error-correction L': 'b1043946459cb7367baa4214edd062671f6c78a6937e0287c7ca2f832ceacece',
-    '--error-correction Q': 'a3efa49a970267cadb5d4dd3f0fcb67d69bc5069d51809f16754f06dc74de286',
-    '--error-correction H': '2caa340d11e530a7e770caf71a3d0efee85defe4f5aec315b9c00bda6658089f',
-    '--filename': '9a61e8185bfcf9b9c3d2901baea7430b448ed6e0e03759619045b61a38e29d4e',
-    '--instructions both': '6ad4661009ebda82e6618f81caaa2fa43df1ac7d4a938ef3a7818588a8cc3c6b',
-    '--instructions cover': '452f3e23a7f71e1f9d1892d64910ff185f12799dc5093f29f085fe003bd69629',
-    '--instructions none': 'c66fdd3e1a7fd3107f95daab2d07b65cfe5e4b679fef5b2dca73d004baee494d',
-    '--note (1)': '6cdf1ba777d47c68a92eb1f49f35b8bd186431e639d560b6f1bacee2a3ee03e3',
-    '--note (2)': '8085233b46a4c61477fae0e9abea0c7f751f829763eaeaee36a3de3e6046ad9d',
-    '--num-copies': '7c705557390d346eb87bb08ea437ed8a42198b2ceeea296fbf891c1b20c695e2',
-    '--page': '8b3cfdb1e5b07ec72c552f6ab95ab39c04d419d23afad31b7b78fda395d435e9',
-    '--qr-version': '1add32b1947948f32d6baab525a5621930a46cc2438012953b8992e930adea70',
-    '--scale': '4cc28752038be68e69bd9b52ef3ab1aa310ce216be7af86e5cdfa0582c61e9b1',
-    '--no-shuffle': '10559366e0b5590660838b5c7893f1a3fb22fefab39e943dc667cfc34c82d6c9',
-
-    '1K zeros': '0f5da5bd812284e6a18f974af3187b442c4fed0cc595c231b96a5bdd4b0cd965',
-    '10K zeros': '68328734a28dcc05d9884641c591f0592920f5efb861062a17877a0557400e0c',
-    '100K zeros': 'b3fa3458bdf24863d1450d0c3b407c2b7f4847c2dc9d841b9a88c20e89f720b1',
-    '100b random': '59512f3c17bdeb122b652c4fb130e4094f21159d965bea73847177ac51237417',
-    '1K random': '7f9aeeea1ba41b6f6044bdeda64e87b626942dbead4ba409bc1a3f2195b91a2a',
-    '10K random': '63222f94ba30f2e887deb0a85ab032d0fe5c6e87737552d5b151c0b0556888b0',
-    '50K random': '4198a84b9a35f62108c26bd698295d1937d7257382e47db6f79ac8c8613a29a4',
-    '1K zeros, self-check': '0f5da5bd812284e6a18f974af3187b442c4fed0cc595c231b96a5bdd4b0cd965',
-    '1K random, self-check': '7f9aeeea1ba41b6f6044bdeda64e87b626942dbead4ba409bc1a3f2195b91a2a',
+    '--no-erasure-coding': '923ca0be469692222a68d658440da5a7f48fd85c20610494a00048d4f0dcf755',
+    '--error-correction L': 'f4dcbfe447b165b95735a5bd3a3ba3e0e5f9d2d7d9faddc362bf7a19a6b7bad4',
+    '--error-correction Q': 'd9534c44c92f1e0ee1c019deb4b47e86df2f1ec29327adcfb2315f16c46d5b23',
+    '--error-correction H': 'b276d2dce25fbfd2506fc4eeccb8a1d38e1e9017b1742cab855e3effc851235f',
+    '--filename': '9a075dd3429141c9577c3eb6f3db379cd2e900ee5ca5bee5b9cc9e2e832774f2',
+    '--instructions both': '4bb9f4ff23b9c1889ab84c4714a126524b9b811f4933b05fd20d01967dab9340',
+    '--instructions cover': '4757a096d77b5c1cc0774f69577d1365d35d3113115901bbddf63d61411c3ed9',
+    '--instructions none': '361e065a0addbe02a11385a8bb9510940e6d09cae6f0482223ca2f08013a1d00',
+    '--note (1)': '49191147dbbe7d9a411567b54f74f86b235f387c8c4a28fe68dbcb86dc310fca',
+    '--note (2)': '1dee193b34d777aa2a20097e3e800f2b4206d73e908168a338baa8011f9b23d6',
+    '--num-copies': 'ba5f2936cfe981ffb5fa074f0893f084747527b00b313f0d86a29260b4f02f07',
+    '--page': '551cfb9c092bd3c837f0cbf7fb14c7321dfcf5f0d7cb9d12a79e363004be4ce4',
+    '--qr-version': 'eebf76bd76f62d6d0f097417ae8fd95cb10963c5dc71e68d88740420899a3325',
+    '--scale': '7c402f001634271bdd04e58b7ebd5bbb71b3d249bc378efa4f5f57bb6d26d8de',
+    '--no-shuffle': '8ce2b34dc9a57a3fb521bd59ba1f0ec1a7d51f8b67c54fc7ad21eec87454fe0f',
+    '1K zeros': 'c952b0a40d1fa655b367b274672e0a9b1d56fc034fc690230a0ad842bc4eef53',
+    '10K zeros': '1889f9ad99d9d7df224e3e65283d14602a62b14253bb1adff3c99ae38bc9734b',
+    '100K zeros': '1ddfe806cd82e74c5d5f025aae2ce9f38577c9d9d2347337a75fe274e9477e2b',
+    '100b random': 'c3f49775b97342e5e4fec58bdb34a3db21e0ee2afbc243d943df2bdc9c9b16df',
+    '1K random': '0b330dbdabb7f987cff35d262d2e8512506eff5ae010b9c9918251de26f5d633',
+    '10K random': '1c0b1d2b2e8f2a9cebdd29f37e05a8ead7bfd70e5eca9c91b368625742a66d51',
+    '50K random': '3042edf630420c2aa0f95b0de9616ceaef0aece39e8773bcdfd163286afab7fe',
+    '1K zeros, self-check': 'c952b0a40d1fa655b367b274672e0a9b1d56fc034fc690230a0ad842bc4eef53',
+    '1K random, self-check': '0b330dbdabb7f987cff35d262d2e8512506eff5ae010b9c9918251de26f5d633',
 }
 
+@only_once
+def make_pdf():
+    print_red(REPRODUCIBILITY_FAILING)
+    # Make a new regression.pdf for future generations
+    qr_command = " ".join(["python3", "qr-backup"] + DEFAULT_ARGS) + " >zeros.pdf"
+    subprocess.run(qr_command, shell=True, input=zeros(100))
 
 def do_test(test, new_blessed):
     name, input_bytes, options, time_limit, restore_options, restore_time_limit = test
@@ -211,14 +220,17 @@ def do_test(test, new_blessed):
     sha = hashlib.sha256(output_bytes).hexdigest()
     elapsed, power = math.ceil(elapsed), math.ceil(math.log(elapsed, 2))
 
+    # TODO: "regression" should be called "reproducibility"
+
     # TODO: Check the data inside the QR-codes as a second, much-less-flaky regression suite.
-    # Note that "regression" should really be called "reproducibility"
+
+    # TODO: Check the text inside the PDFs in a yet third, much-less-flaky regression suite.
 
     if expected_sha is None: # Some tests are non-deterministic (ones using encryption)
         pass
     elif result.returncode != 0:
         print_red("failing-command {} {}s".format(name, elapsed))
-        print_red(textwrap.indent(result2.stderr.decode("utf8"), "  "))
+        print_red(textwrap.indent(result.stderr.decode("utf8"), "  "))
         failures += 1
         return failures, None
     elif sha == expected_sha:
@@ -229,9 +241,8 @@ def do_test(test, new_blessed):
         print("  result:", sha, "!=", expected_sha)
         failures += 1
 
-        if name == '100b zeros':
-            print_red(REPRODUCIBILITY_FAILING)
-            subprocess.run("dd if=/dev/zero count=1 bs=100 2>/dev/null | python3 qr-backup - >zeros.pdf", shell=True)
+        if expected_sha == BLESSED_OUTPUT['100b zeros']:
+            make_pdf()
 
     if elapsed > time_limit*2:
         print_red("too-slow", name, "{}s, <2^{}".format(elapsed, power))
@@ -263,14 +274,33 @@ def do_test(test, new_blessed):
         #print(input_bytes, restored_bytes)
         failures += 1
     if elapsed > restore_time_limit*2:
-        print_red("too-slow", name, "{}s, <2^{}".format(elapsed, power))
+        print_red("too-slow {} {}s, <2^{}".format(name, elapsed, power))
         failures += 1
     elif elapsed <= restore_time_limit / 3:
-        print("too-fast", name, "{}s, <2^{}".format(elapsed, power))
+        print("too-fast {} {}s, <2^{}".format(name, elapsed, power))
         pass
 
     return failures, sha
 
+def run_assertion_test(name, f):
+    try:
+        f()
+        print_green(name)
+        return 0
+    except AssertionError as e:
+        print_red(name)
+        print("  {}".format(e))
+        return 1
+    except Exception as e:
+        print_red(name)
+        print_red("  test failed to run")
+        print("  {}".format(e))
+        return 1
+
+def test_assert_reproducibile_current():
+    out = subprocess.check_output(["sha256sum", "tests/regression.pdf"])
+    expected = "{}  tests/regression.pdf\n".format(BLESSED_OUTPUT['100b zeros']).encode("UTF8")
+    assert out == expected, "tests/regression.pdf does not match the expected SHA256 for the '100b zeros' test"
 
 if __name__ == "__main__":
     if not program_present("zbarimg"):
@@ -279,6 +309,11 @@ if __name__ == "__main__":
 
     failures = 0
     new_blessed = {}
+
+    # Additional, other tests that are not backup examples
+    for name, f in {(k,v) for k,v in globals().items() if k.startswith("test_assert")}:
+        failures += run_assertion_test(name, f)
+
     for test in TESTS:
         new_failures, sha = do_test(test, new_blessed)
         failures += new_failures
