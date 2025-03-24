@@ -1,20 +1,27 @@
 (unreleased)
-- Fixed -v output to include status codes
+- ("Added continuous integration" when done.)
+
+(unreleased) v1.1.4
+- Improved note display
 - Document OS X install
 - Add Dockerfile
 - Add nix flake
+- Fixed bugs
+    - Fixed fatal error in some PIL versions [(#60)](https://github.com/za3k/qr-backup/issues/60)
+    - Fixed -v output not including status codes from commmands run
+    - Reduced severity of warnings related to PDFs and imagemagick security policy
 
-v1.1.3
+v1.1.3, 2022-10-15
 - Added bash completion
 - Added experimental debian packaging
 
-v1.1.2
+v1.1.2, 2022-09-29
 v1.1.1
 - Added --version, -V option
 - Added manpage
 - Added Makefile
 
-v1.1
+v1.1, 2021-05-31
 - Added the `--restore` option so qr-backup will do the restore for you.
 - Add erasure coding, which is turned on by default. This allows losing up
   to 30% of QR codes, but only if you are restoring using qr-backup.
