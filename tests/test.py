@@ -160,8 +160,6 @@ TESTS = [
 ]
 
 BLESSED_OUTPUT = {
-    # These two had better be the same!
-    # If you ever bless a new version, make sure to overwrite tests/regression.pdf with zeros.pdf
     '100b zeros': '4d2cd56bc5a890f2a87419ceec58d29cf9b576b14020ebbdabdd75597827add7',
     'default options': '4d2cd56bc5a890f2a87419ceec58d29cf9b576b14020ebbdabdd75597827add7',
 
@@ -296,6 +294,10 @@ def run_assertion_test(name, f):
         print_red("  test failed to run")
         print("  {}".format(e))
         return 1
+
+def test_assert_zeros_same():
+    # Passing the default options and passing no options should be the same
+    assert BLESSED_OUTPUT['default options'] == BLESSED_OUTPUT['100b zeros']
 
 def test_assert_reproducibile_current():
     out = subprocess.check_output(["sha256sum", "tests/regression.pdf"])
