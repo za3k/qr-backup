@@ -15,6 +15,17 @@ Each test has three possible failure modes. In order of severity, they are
     Is the output bitwise-identical to last time the tests were *blessed*
         blessed: marked correct by hand
 """
+import argparse
+import functools
+import hashlib
+import math
+import multiprocessing
+import operator
+import random
+import subprocess
+import sys
+import textwrap
+import time
 
 REPRODUCIBILITY_FAILING = """
 This is the most basic reproducibility test, so something has changed.
@@ -81,15 +92,6 @@ The code to do this is printed at the bottom of the tests.
 Once you bless output, make sure that tests pass! If output is
 not consistent even between runs, this is a bug in qr-backup.
 """
-
-import functools
-import hashlib
-import math
-import random
-import subprocess
-import sys
-import textwrap
-import time
 
 only_once = functools.cache # As long as it's called on a no-argument function :)
 
@@ -202,7 +204,23 @@ def make_pdf():
     qr_command = " ".join(["python3", "qr-backup"] + DEFAULT_ARGS) + " >100zeros-test.pdf"
     subprocess.run(qr_command, shell=True, input=zeros(100))
 
-def do_test(test, new_blessed):
+class Test:
+    def __init__(self, f, *args, **kwargs):
+        self.f = f
+        self.args = args
+        self.kwargs = kwargs
+    def __call__(self):
+        return self.f(*self.args, **self.kwargs)
+
+class BackupTest(Test):
+    def __init__(self, *args, **kwargs):
+        super().__init__(run_backup_tests, *args, **kwargs)
+
+class AssertionTest(Test):
+    def __init__(self, *args, **kwargs):
+        super().__init__(run_assertion_test, *args, **kwargs)
+
+def run_backup_tests(test, new_blessed, run_reproducibility=True, run_speed=True, run_restore=True):
     name, input_bytes, options, time_limit, restore_options, restore_time_limit = test
     expected_sha = BLESSED_OUTPUT.get(name, b'')
 
@@ -221,61 +239,66 @@ def do_test(test, new_blessed):
 
     # TODO: Check the text inside the PDFs in a yet third, much-less-flaky reproducibility suite.
 
-    if expected_sha is None: # Some tests are non-deterministic (ones using encryption)
-        pass
-    elif result.returncode != 0:
-        print_red("failing-command {} {}s".format(name, elapsed))
-        print_red(textwrap.indent(result.stderr.decode("utf8"), "  "))
-        failures += 1
-        return failures, None
-    elif sha == expected_sha:
-        print_green("backup-reproducible {} {}s".format(name, elapsed))
-    else:
-        print_red("backup-not-reproducible {} {}s".format(name, elapsed))
-        print("  command:", qr_command)
-        print("  result:", sha, "!=", expected_sha)
-        failures += 1
+    if run_reproducibility:
+        if expected_sha is None: # Some tests are non-deterministic (ones using encryption)
+            pass
+        elif result.returncode != 0:
+            print_red("failing-command {} {}s".format(name, elapsed))
+            print_red(textwrap.indent(result.stderr.decode("utf8"), "  "))
+            failures += 1
+            return failures, None
+        elif sha == expected_sha:
+            print_green("backup-reproducible {} {}s".format(name, elapsed))
+        else:
+            print_red("backup-not-reproducible {} {}s".format(name, elapsed))
+            print("  command:", qr_command)
+            print("  result:", sha, "!=", expected_sha)
+            failures += 1
 
-        if expected_sha == BLESSED_OUTPUT['100b zeros']:
-            make_pdf()
+            if expected_sha == BLESSED_OUTPUT['100b zeros']:
+                make_pdf()
 
-    if elapsed > time_limit*2:
-        print_red("too-slow", name, "{}s, <2^{}".format(elapsed, power))
-        failures += 1
-    elif elapsed <= time_limit / 3:
-        print("too-fast", name, "{}s, <2^{}".format(elapsed, power))
-        pass
+    if run_speed:
+        if elapsed > time_limit*2:
+            print_red("too-slow", name, "{}s, <2^{}".format(elapsed, power))
+            failures += 1
+        elif elapsed <= time_limit / 3:
+            print("too-fast", name, "{}s, <2^{}".format(elapsed, power))
+            pass
 
-    restore_options = DEFAULT_RESTORE_ARGS + restore_options
-    restore_command = " ".join(["python3", "qr-backup", "--restore"] + restore_options)
-    start = time.time()
-    result2 = subprocess.run(restore_command, shell=True, capture_output=True, input=output_bytes)
-    elapsed = time.time() - start
-    restored_bytes = result2.stdout
-    elapsed, power = math.ceil(elapsed), math.ceil(math.log(elapsed, 2))
+    if run_restore:
+        restore_options = DEFAULT_RESTORE_ARGS + restore_options
+        restore_command = " ".join(["python3", "qr-backup", "--restore"] + restore_options)
+        start = time.time()
+        result2 = subprocess.run(restore_command, shell=True, capture_output=True, input=output_bytes)
+        elapsed = time.time() - start
+        restored_bytes = result2.stdout
+        elapsed, power = math.ceil(elapsed), math.ceil(math.log(elapsed, 2))
 
-    if result2.returncode != 0:
-        print_red("failing-command {} {}s".format(name, elapsed))
-        print_red(textwrap.indent(result2.stderr.decode("utf8"), "  "))
-        failures += 1
-        return failures, None
-    elif input_bytes == restored_bytes:
-        print_green("correct-restore {} {}s".format(name, elapsed))
-        if expected_sha is not None and sha != expected_sha:
-            new_blessed[name] = sha   
-    else:
-        print_red("incorrect-restore {} {}s".format(name, elapsed))
-        print("  command:", restore_command)
-        #print(input_bytes, restored_bytes)
-        failures += 1
-    if elapsed > restore_time_limit*2:
-        print_red("too-slow {} {}s, <2^{}".format(name, elapsed, power))
-        failures += 1
-    elif elapsed <= restore_time_limit / 3:
-        print("too-fast {} {}s, <2^{}".format(name, elapsed, power))
-        pass
+        if result2.returncode != 0:
+            print_red("failing-command {} {}s".format(name, elapsed))
+            print_red(textwrap.indent(result2.stderr.decode("utf8"), "  "))
+            failures += 1
+            return failures, None
+        elif input_bytes == restored_bytes:
+            print_green("correct-restore {} {}s".format(name, elapsed))
+            if expected_sha is not None and sha != expected_sha:
+                new_blessed[name] = sha   
+        else:
+            print_red("incorrect-restore {} {}s".format(name, elapsed))
+            print("  command:", restore_command)
+            #print(input_bytes, restored_bytes)
+            failures += 1
 
-    return failures, sha
+    if run_restore and run_speed:
+        if elapsed > restore_time_limit*2:
+            print_red("too-slow {} {}s, <2^{}".format(name, elapsed, power))
+            failures += 1
+        elif elapsed <= restore_time_limit / 3:
+            print("too-fast {} {}s, <2^{}".format(name, elapsed, power))
+            pass
+
+    return failures
 
 def run_assertion_test(name, f):
     try:
@@ -292,35 +315,55 @@ def run_assertion_test(name, f):
         print("  {}".format(e))
         return 1
 
-def test_assert_zeros_same():
+def test_assert_full_zeros_same():
     # Passing the default options and passing no options should be the same
     assert BLESSED_OUTPUT['default options'] == BLESSED_OUTPUT['100b zeros']
 
-def test_assert_reproducibile_current():
+def test_assert_full_reproducible_current():
     out = subprocess.check_output(["sha256sum", "tests/100zeros-good.pdf"])
     expected = "{}  tests/100zeros-good.pdf\n".format(BLESSED_OUTPUT['100b zeros']).encode("UTF8")
     assert out == expected, "tests/100zeros-good.pdf does not match the expected SHA256 for the '100b zeros' test"
 
-if __name__ == "__main__":
-    if not program_present("zbarimg"):
-        print_red("To run tests, install the packages: zbar")
-        sys.exit(6)
+def test_runner(tests, parallel):
+    # Each "test" should print to stdout and return the number of failures
+    # Don't try to avoid interleaving stdout. Too hard.
 
-    failures = 0
-    new_blessed = {}
+    if parallel:
+        with multiprocessing.Pool() as P:
+            results = P.map(operator.call, tests)
+    else:
+        results = map(operator.call, tests)
+    return sum(results)
+
+def main(args):
+    run_reproducibility = args.full
+    run_speed = args.full
+    run_restore = True
+    parallel = not run_speed
+
+    tests = []
 
     # Additional, other tests that are not backup examples
-    for name, f in {(k,v) for k,v in globals().items() if k.startswith("test_assert")}:
-        failures += run_assertion_test(name, f)
+    for name, f in {(k,v) for k,v in globals().items() if k.startswith("test_assert_")}:
+        if name.startswith("test_assert_full_"):
+            if not args.full: continue
+            name = name.removeprefix("test_assert_full_")
+        else:
+            name = name.removeprefix("test_assert_")
+        name = name.replace("_", "-")
+        tests.append(AssertionTest(name, f))
 
+    # Normal tests (several tests are run for each input)
+    new_blessed = {}
     for test in TESTS:
-        new_failures, sha = do_test(test, new_blessed)
-        failures += new_failures
-        if False and new_failures > 0:
-            with open("failure.bin", "wb") as f:
-                f.write(test[1])
-            print("exit on first failure")
-            break
+        tests.append(BackupTest(
+            test, new_blessed, 
+            run_reproducibility = run_reproducibility,
+            run_speed = run_speed,
+            run_restore = run_restore,
+        ))
+
+    failures = test_runner(tests, parallel=parallel)
 
     if len(new_blessed) > 0:
         print("NEW BLESSED_OUTPUT = {")
@@ -331,4 +374,22 @@ if __name__ == "__main__":
     print("{} failures".format(failures))
     if failures > 0:
         print_red(__doc__)
-    sys.exit(1 if failures > 0 else 0)
+    return failures
+
+if __name__ == "__main__":
+    if not program_present("zbarimg"):
+        print_red("To run tests, install the packages: zbar")
+        sys.exit(6)
+
+    parser = argparse.ArgumentParser(
+        prog="tests.py",
+        description="Run qr-backup tests",
+    )
+    parser.add_argument("--full", action="store_true", default=True)
+    parser.add_argument("--fast", dest="full", action="store_false")
+    args = parser.parse_args()
+
+    failures = main(args)
+
+    if failures > 0:
+        sys.exit(1)

@@ -37,6 +37,8 @@ install:
 	install -D -m 644 docs/qr-backup.1.man $(DESTDIR)$(PREFIX)$(MANDIR)/man1/qr-backup.1
 test:
 	python3 tests/test.py
+test-fast:
+	python3 tests/test.py --fast
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)$(BINDIR)/qr-backup
 	rm -f $(DESTDIR)$(PREFIX)$(MANDIR)/man1/qr-backup.1
