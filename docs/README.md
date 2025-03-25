@@ -50,7 +50,7 @@ The restore process **does NOT require qr-backup**. It does require a command-li
 - [Should I back up to paper?](FAQ.md#should-i-back-up-to-paper)
 - [What are the advantages of paper backups?](FAQ.md#what-are-the-advantages-of-paper-backups)
 - [How much of my backup can I lose and still restore?](FAQ.md#how-much-of-my-backup-can-i-lose-and-still-restore)
-- [Should I encrypt (FAQpassword-protect) my backups?](#should-i-encrypt-password-protect-my-backups)
+- [Should I encrypt (password-protect) my backups?](FAQ.md#should-i-encrypt-password-protect-my-backups)
 - [How can I protect my paper backup?](FAQ.md#how-can-i-protect-my-paper-backup)
 
 ### Features

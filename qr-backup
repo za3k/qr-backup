@@ -1191,6 +1191,7 @@ def main_backup(args):
     # (Gzip) Compression
     if use_compression:
         content = gzip.compress(content, mtime=0)
+        # This makes CI tests pass, see https://github.com/python/cpython/issues/112346
         content = bytearray(content)
         content[9] = 255
         content = bytes(content)
