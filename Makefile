@@ -35,11 +35,8 @@ clean:
 install:
 	install -D qr-backup $(DESTDIR)$(PREFIX)$(BINDIR)/qr-backup
 	install -D -m 644 docs/qr-backup.1.man $(DESTDIR)$(PREFIX)$(MANDIR)/man1/qr-backup.1
-test: tests/regression.pdf
+test:
 	python3 tests/test.py
-tests/regression.pdf:
-	mkdir -p examples
-	dd if=/dev/zero bs=1 count=100 2>/dev/null | python3 qr-backup --skip-checks - --backup-date 2022-09-22 >tests/regression.pdf
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)$(BINDIR)/qr-backup
 	rm -f $(DESTDIR)$(PREFIX)$(MANDIR)/man1/qr-backup.1

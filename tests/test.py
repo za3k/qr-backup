@@ -11,7 +11,7 @@ Each test has three possible failure modes. In order of severity, they are
 
     Note: too-fast can also be reported, which means you have improved the
           test speed, and need to update the "target" running time
-(3) Reproducibility: Backup regression test (backup-regession)
+(3) Reproducibility: Backup reproducibility test (backup-not-reproducible)
     Is the output bitwise-identical to last time the tests were *blessed*
         blessed: marked correct by hand
 """
@@ -30,18 +30,18 @@ any way, because then we don't need human judgement.
 Because of this nice property, you should default to considering it
 worth fixing if reproducibilty tests fail (rather than rubber-stamping changes).
 
-To narrow down what changed, compare the ouput of zeros.pdf (we just generated
-it for you) with the file tests/regression.pdf (a known-good version).
+To narrow down what changed, compare the ouput of 100zeros-test.pdf (we just generated
+it for you) with the file tests/100zeros-good.pdf (a known-good version).
 
 My suggested process to get started:
 
-1. 'git checkout' the last commit in which tests/regression.pdf was last
+1. 'git checkout' the last commit in which tests/100zeros-good.pdf was last
    touched, and re-generate a new version using
 
-       dd if=/dev/zero count=1 bs=100 | python3 qr-backup - >regression2.pdf
+       dd if=/dev/zero bs=1 count=100 2>/dev/null | python3 qr-backup --skip-checks - --backup-date 2022-09-22 >100zeros-old.pdf
    
-   If the output is identical to regression.pdf, this confirms the change was
-   in the qr-backup repository.
+   If the output is identical to tests/100zeros-good.pdf, this confirms
+   the change was in the qr-backup repository.
 
    Either way, proceed with the steps 2 and on.
 
@@ -55,7 +55,7 @@ My suggested process to get started:
    Another possibility is differing output across runs.
    We once accidentally embedded the date in pdfs made during test runs.
 
-2. Convert each of zeros.pdf and tests/regession.pdf to a png. Compare them
+2. Convert each of 100zeros-test.pdf and tests/100zeros-good.pdf to a png. Compare them
    using a visual diff tool online.
 
    Have the QR codes changed, the instructions, or neither?
@@ -199,8 +199,7 @@ BLESSED_OUTPUT = {
 @only_once
 def make_pdf():
     print_red(REPRODUCIBILITY_FAILING)
-    # Make a new regression.pdf for future generations
-    qr_command = " ".join(["python3", "qr-backup"] + DEFAULT_ARGS) + " >zeros.pdf"
+    qr_command = " ".join(["python3", "qr-backup"] + DEFAULT_ARGS) + " >100zeros-test.pdf"
     subprocess.run(qr_command, shell=True, input=zeros(100))
 
 def do_test(test, new_blessed):
@@ -218,11 +217,9 @@ def do_test(test, new_blessed):
     sha = hashlib.sha256(output_bytes).hexdigest()
     elapsed, power = math.ceil(elapsed), math.ceil(math.log(elapsed, 2))
 
-    # TODO: "regression" should be called "reproducibility"
+    # TODO: Check the data inside the QR-codes as a second, much-less-flaky reproducibility suite.
 
-    # TODO: Check the data inside the QR-codes as a second, much-less-flaky regression suite.
-
-    # TODO: Check the text inside the PDFs in a yet third, much-less-flaky regression suite.
+    # TODO: Check the text inside the PDFs in a yet third, much-less-flaky reproducibility suite.
 
     if expected_sha is None: # Some tests are non-deterministic (ones using encryption)
         pass
@@ -232,9 +229,9 @@ def do_test(test, new_blessed):
         failures += 1
         return failures, None
     elif sha == expected_sha:
-        print_green("backup-no-regression {} {}s".format(name, elapsed))
+        print_green("backup-reproducible {} {}s".format(name, elapsed))
     else:
-        print_red("backup-regression {} {}s".format(name, elapsed))
+        print_red("backup-not-reproducible {} {}s".format(name, elapsed))
         print("  command:", qr_command)
         print("  result:", sha, "!=", expected_sha)
         failures += 1
@@ -300,9 +297,9 @@ def test_assert_zeros_same():
     assert BLESSED_OUTPUT['default options'] == BLESSED_OUTPUT['100b zeros']
 
 def test_assert_reproducibile_current():
-    out = subprocess.check_output(["sha256sum", "tests/regression.pdf"])
-    expected = "{}  tests/regression.pdf\n".format(BLESSED_OUTPUT['100b zeros']).encode("UTF8")
-    assert out == expected, "tests/regression.pdf does not match the expected SHA256 for the '100b zeros' test"
+    out = subprocess.check_output(["sha256sum", "tests/100zeros-good.pdf"])
+    expected = "{}  tests/100zeros-good.pdf\n".format(BLESSED_OUTPUT['100b zeros']).encode("UTF8")
+    assert out == expected, "tests/100zeros-good.pdf does not match the expected SHA256 for the '100b zeros' test"
 
 if __name__ == "__main__":
     if not program_present("zbarimg"):
