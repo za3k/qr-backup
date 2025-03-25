@@ -23,7 +23,7 @@ dist/qr-backup-${VERSION}.tar.gz: docs font src tests Makefile qr-backup require
 	rm -f $@
 	gzip -9 dist/qr-backup-${VERSION}.tar
 dist/qr-backup-${VERSION}.tar.gz.sig: dist/qr-backup-${VERSION}.tar.gz
-	gpg --detach-sign --armor -o $@ $<
+	gpg --local-user 4F92E819BBDB4225ABE690437DA2C1641594B27F --detach-sign --armor -o $@ $<
 deb: dist/qr-backup-${VERSION}.tar.gz
 	mkdir -p dist/debian
 	cp dist/qr-backup-${VERSION}.tar.gz dist/debian/qr-backup_${VERSION}.orig.tar.gz
