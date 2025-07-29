@@ -2,6 +2,15 @@
 %:
 	dh $@
 
+export GNUPGHOME = /tmp/qr-backup-tests-gnupghome
+
 override_dh_auto_build:
+
 override_dh_auto_install:
 	$(MAKE) DESTDIR=$$(pwd)/debian/qr-backup PREFIX=/usr install
+
+execute_before_dh_auto_test:
+	mkdir -p $(GNUPGHOME)
+
+execute_after_dh_auto_test:
+	rm -r $(GNUPGHOME)

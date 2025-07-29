@@ -3,11 +3,29 @@ Maintainer: Zachary Vance <za3k@za3k.com>
 Section: misc
 Priority: optional
 Standards-Version: 4.5.1
-Build-Depends: debhelper (>= 9)
+Build-Depends: debhelper-compat (=13),
+               fonts-dejavu-mono <!nocheck>,
+               ghostscript <!nocheck>,
+               gnupg2 <!nocheck>,
+               imagemagick <!nocheck>,
+               python3 <!nocheck>,
+               python3-pillow <!nocheck>,
+               python3-qrcode <!nocheck>,
+               python3-reedsolo <!nocheck>,
+               zbar-tools <!nocheck>,
 
 Package: qr-backup
 Architecture: all
-Depends: ${misc:Depends}, gnupg2, imagemagick, python3, python3-pillow, python3-reedsolo, python3-qrcode, zbar-tools
+Depends: fonts-dejavu-mono,
+         ghostscript,
+         gnupg2,
+         imagemagick,
+         python3,
+         python3-pillow,
+         python3-qrcode,
+         python3-reedsolo,
+         zbar-tools,
+         ${misc:Depends},
 Description: paper backups of files using QR codes
  qr-backup takes file(s), and outputs a "paper backup": a printable
  black-and-white pdf full of QR codes. To back up your file, print
