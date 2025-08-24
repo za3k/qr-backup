@@ -39,6 +39,8 @@ test:
 	python3 tests/test.py
 test-fast:
 	python3 tests/test.py --fast
+docker:
+	docker build -f installers/Dockerfile -t za3k/qr-backup:${VERSION} .
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)$(BINDIR)/qr-backup
 	rm -f $(DESTDIR)$(PREFIX)$(MANDIR)/man1/qr-backup.1
