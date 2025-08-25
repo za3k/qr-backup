@@ -1,4 +1,5 @@
 (unreleased)
+- PDF output is more reproducible across Pillow versions
 - Added continuous integration
 - Fixed bugs
     - Corrected return code when --check-restore is enabled [(PR #51)](https://github.com/za3k/qr-backup/pull/61)

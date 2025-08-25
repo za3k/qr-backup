@@ -16,7 +16,7 @@ https://github.com/za3k/qr-backup
 
 Please report any bugs.
 """
-import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageOps
+import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageOps, PIL.PdfParser
 import qrcode
 import reedsolo
 
@@ -210,6 +210,15 @@ def wrap_keeping_indent(text, width):
     return '\n'.join(lines)
 HELP = wrap_keeping_indent(HELP, 80)
 assert all(len(line)<=80 for line in HELP.split("\n"))
+
+# Temporary reproducibility hack, hopefully.
+# See: https://github.com/python-pillow/Pillow/issues/9175
+orig = PIL.PdfParser.PdfParser.write_comment
+def monkey_patch(s, a):
+    if a.startswith("created by Pillow "):
+        a = "created by Pillow 11.1.0 PDF driver"
+    return orig(s, a)
+PIL.PdfParser.PdfParser.write_comment = monkey_patch
 
 COVER = """
 DO NOT THROW OUT
