@@ -21,9 +21,12 @@ import hashlib
 import math
 import multiprocessing
 import operator
+import os
 import random
+import shlex
 import subprocess
 import sys
+import tempfile
 import textwrap
 import time
 
@@ -244,6 +247,7 @@ def run_backup_tests(test, new_blessed, run_reproducibility=True, run_speed=True
             pass
         elif result.returncode != 0:
             print_red("failing-command {} {}s".format(name, elapsed))
+            print_red(textwrap.indent("generate command: " + qr_command, "  "))
             print_red(textwrap.indent(result.stderr.decode("utf8"), "  "))
             failures += 1
             return failures, None
@@ -251,7 +255,7 @@ def run_backup_tests(test, new_blessed, run_reproducibility=True, run_speed=True
             print_green("backup-reproducible {} {}s".format(name, elapsed))
         else:
             print_red("backup-not-reproducible {} {}s".format(name, elapsed))
-            print("  command:", qr_command)
+            print_red(textwrap.indent("generate command: " + qr_command, "  "))
             print("  result:", sha, "!=", expected_sha)
             failures += 1
 
@@ -261,6 +265,7 @@ def run_backup_tests(test, new_blessed, run_reproducibility=True, run_speed=True
     if run_speed:
         if elapsed > time_limit*2:
             print_red("too-slow", name, "{}s, <2^{}".format(elapsed, power))
+            print_red(textwrap.indent("generate command: " + qr_command, "  "))
             failures += 1
         elif elapsed <= time_limit / 3:
             print("too-fast", name, "{}s, <2^{}".format(elapsed, power))
@@ -277,16 +282,21 @@ def run_backup_tests(test, new_blessed, run_reproducibility=True, run_speed=True
 
         if result2.returncode != 0:
             print_red("failing-command {} {}s".format(name, elapsed))
+            print_red(textwrap.indent("generate command: " + qr_command, "  "))
+            print_red(textwrap.indent("restore command: " + restore_command, "  "))
             print_red(textwrap.indent(result2.stderr.decode("utf8"), "  "))
             failures += 1
-            return failures, None
+            return failures
         elif input_bytes == restored_bytes:
             print_green("correct-restore {} {}s".format(name, elapsed))
+            fail = False
             if expected_sha is not None and sha != expected_sha:
                 new_blessed[name] = sha   
         else:
             print_red("incorrect-restore {} {}s".format(name, elapsed))
-            print("  command:", restore_command)
+        
+            print_red(textwrap.indent("generate command: " + qr_command, "  "))
+            print_red(textwrap.indent("restore command: " + restore_command, "  "))
             #print(input_bytes, restored_bytes)
             failures += 1
 
@@ -363,7 +373,10 @@ def main(args):
             run_restore = run_restore,
         ))
 
-    failures = test_runner(tests, parallel=parallel)
+    with tempfile.TemporaryDirectory() as td:
+        # This fixes https://github.com/za3k/qr-backup/issues/74, where $HOME/.gnupg may not exist and cause decryption to fail
+        os.environ["GNUPGHOME"] = td
+        failures = test_runner(tests, parallel=parallel)
 
     if len(new_blessed) > 0:
         print("NEW BLESSED_OUTPUT = {")
