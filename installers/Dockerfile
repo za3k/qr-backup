@@ -1,4 +1,4 @@
-FROM python:3.12
+FROM python:3.12-trixie
 
 RUN apt-get update \
    && apt-get install -y \
@@ -16,7 +16,7 @@ RUN apt-get update \
     python3-reedsolo \
    && apt-get autopurge -y \
    && apt-get autoclean -y \
-   && sed -i 's/<policy domain="coder" rights="none" pattern="PDF" \/>/<policy domain="coder" rights="read|write" pattern="PDF" \/>/g' /etc/ImageMagick-6/policy.xml
+   && sed -i 's/<policy domain="coder" rights="none" pattern="PDF" \/>/<policy domain="coder" rights="read|write" pattern="PDF" \/>/g' /etc/ImageMagick-7/policy.xml
 
 COPY ./requirements.txt /src/
 

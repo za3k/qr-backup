@@ -4,7 +4,7 @@
 - Added continuous integration
 - Fixed bugs
     - Corrected return code when --check-restore is enabled [(PR #51)](https://github.com/za3k/qr-backup/pull/61)
-    - Updated debian package
+- Support Debian 13 release. Updated debian package, docker package.
 
 v1.1.4, 2025-03-24
 - Improved note display

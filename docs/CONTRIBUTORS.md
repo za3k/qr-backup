@@ -5,6 +5,7 @@ Additional thanks to many contributors.
 People who provided code:
 
 - [Antoine Beaupré](https://github.com/anarcat), debian packaging; notes
+- [Chris Barry](https://github.com/chris-barry), docker bugfix
 - [Julian Rüth](https://github.com/saraedum), bugfix
 - [Summer Tea](https://github.com/acuteaangle), nix packaging; continuous integration
 - [tenzap](https://github.com/tenzap), debian packaging
