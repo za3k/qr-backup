@@ -579,7 +579,7 @@ def program_present(program):
 
 def ubuntu_policy_problem():
     """Tests for Debian/Ubuntu's policy of disabling all PDF conversion using ImageMagick"""
-    command = ["grep", "-F", "-s", "-q", '''<policy domain="coder" rights="none" pattern="PDF" />''', "/etc/ImageMagick-6/policy.xml"]
+    command = ["grep", "-F", "-s", "-q", '''<policy domain="coder" rights="none" pattern="PDF" />''', "/etc/ImageMagick-6/policy.xml", "/etc/ImageMagick-7/policy.xml"]
     return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
 
 def length_encode(data):
@@ -1544,7 +1544,7 @@ def image_restore(image_paths):
         return path.endswith(".pdf") or path == "-"
     if any(_is_pdf(path) for path in image_paths):
         if ubuntu_policy_problem():
-            logging.fatal("'convert' is not available for PDFs. Ubuntu forbids PDF conversion using imagemagick. More information at: https://github.com/za3k/qr-backup/tree/master/docs")
+            logging.fatal("Restore is not available for PDFs. Your system forbids converting a PDF to an image with imagemagick. More information at: https://github.com/za3k/qr-backup/blob/master/docs/FAQ.md#my-self-test-is-failing-on-ubuntu")
             sys.exit(5)
 
         temporary = []
