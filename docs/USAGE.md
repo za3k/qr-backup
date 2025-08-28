@@ -77,7 +77,7 @@ Backup options:
         Default: yes if erasure coding is enabled (default), no otherwise
     --skip-checks, --no-skip-checks
         Skip erasure code checks, self-restore checks.
-        Default: not skipped
+        Default: skipped
 
 
 Restore options:

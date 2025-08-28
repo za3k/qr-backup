@@ -1,4 +1,5 @@
 (unreleased)
+- Disabled self-check by default, because there are too many false positives from zbarimg's flaky QR scanning from PDF
 - PDF output is more reproducible across Pillow versions
 - Added continuous integration
 - Fixed bugs

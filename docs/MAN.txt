@@ -92,8 +92,7 @@ BACKUP OPTIONS
               Default: yes if erasure coding is enabled (default), no otherwise
 
        --skip-checks, --no-skip-checks
-              Skip erasure code  checks,  self-restore  checks.   Default:  not
-              skipped
+              Skip erasure code checks, self-restore checks.  Default: skipped
 
 RESTORE OPTIONS
        --code-count-erasure COUNT
@@ -106,11 +105,11 @@ RESTORE OPTIONS
               Force decompression (on/off).  Default: automatic
 
        --display, --no-display
-              For  webcam  scanning,  (display/don't display) a webcam preview.
+              For webcam scanning, (display/don't display)  a  webcam  preview.
               Default: display
 
        --encrypt PASSPHRASE, --no-encrypt
-              Force decryption (on/off) and give the passphrase if  decrypting.
+              Force  decryption (on/off) and give the passphrase if decrypting.
               Default: automatic
 
        --image-restore
@@ -120,7 +119,7 @@ RESTORE OPTIONS
               Set the restore file path.  Default: stdout
 
        --sha256 SHA256
-              Include  a  sha256sum to check the file.  Giving the initial part
+              Include a sha256sum to check the file.  Giving the  initial  part
               of the sha256sum does a partial check.  Default: no check, prints
               checksum to stderr
 
@@ -128,7 +127,7 @@ RESTORE OPTIONS
               Force webcam-based restore.  Default: automatic
 
 EXIT VALUES
-       0      Success.  This includes certain self-test  failures  which  some-
+       0      Success.   This  includes  certain self-test failures which some-
               times fail by chance.
 
        1      Invalid command line option
@@ -148,30 +147,30 @@ EXIT VALUES
 BUGS
        Please report any bugs at https://github.com/za3k/qr-backup/issues .
 
-       Sometimes  scanned  images,  including  the original PDF, cannot be read
+       Sometimes scanned images, including the original  PDF,  cannot  be  read
        successfully and the restore self-check fails.  This appears to be a bug
        in zbar.
 
-       On Debian, Ubuntu and certain other systems, the default  system  image-
+       On  Debian,  Ubuntu and certain other systems, the default system image-
        magick policy prevents reading or writing PDFs.  Since qr-backup depends
-       on  both,  it will fail.  qr-backup does its best to report this problem
+       on both, it will fail.  qr-backup does its best to report  this  problem
        clearly.
 
-       It is possible to print barcodes so large or small your webcam or  scan-
+       It  is possible to print barcodes so large or small your webcam or scan-
        ner cannot read them.  Make sure to test your restore process when using
        non-default settings.
 
 COPYRIGHT
-       qr-backup  was written by Zachary Vance, and is released into the public
-       domain and under  CC0  <https://creativecommons.org/share-your-work/pub-
+       qr-backup was written by Zachary Vance, and is released into the  public
+       domain  and  under CC0 <https://creativecommons.org/share-your-work/pub-
        lic-domain/cc0/>.  The generated PDF includes the DejaVu Sans Mono font,
-       which   has   a   separate  license  <https://dejavu-fonts.github.io/Li-
+       which  has  a   separate   license   <https://dejavu-fonts.github.io/Li-
        cense.html>.
 
-       The qr-backup source code is available  at  <https://github.com/za3k/qr-
+       The  qr-backup  source code is available at <https://github.com/za3k/qr-
        backup>.
 
 AUTHORS
        Zachary Vance.
 
-qr-backup 1.1.3                    March 2025                      QR-BACKUP(1)
+qr-backup 1.1.4                   August 2025                      QR-BACKUP(1)

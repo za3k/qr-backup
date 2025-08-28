@@ -58,7 +58,7 @@ BACKUP_OPTIONS = [
     (("--qr-version VERSION",), "10", "Uses QR codes, version VERSION. Versions range from 1-40. The bigger the version, the harder to scan but the more data per code."),
     (("--scale SCALE",), "5px", "Scale QR codes so that each small square in the QR code is SCALE x SCALE pixels."),
     (("--shuffle", "--no-shuffle"), "yes if erasure coding is enabled (default), no otherwise", "Spread QR codes across pages. This can help prevent data loss."),
-    (("--skip-checks", "--no-skip-checks"), "not skipped", "Skip erasure code checks, self-restore checks."),
+    (("--skip-checks", "--no-skip-checks"), "skipped", "Skip erasure code checks, self-restore checks."),
 ]
 RESTORE_OPTIONS = [
     (("--code-count-erasure COUNT",), "automatic", "Specify the number of erasure QR codes."),
@@ -955,7 +955,7 @@ def main_backup(args):
     use_shuffle = None
     use_tar = False
     num_copies = 1
-    do_checks = True
+    do_checks = False # Disabled until zbar is less flaky (aka never)
     verbose = False
 
     # parse arguments
