@@ -1,7 +1,9 @@
 #!/usr/bin/make -f
+
+export PREFIX=/usr
+
 %:
 	dh $@
 
-override_dh_auto_build:
-override_dh_auto_install:
-	$(MAKE) DESTDIR=$$(pwd)/debian/qr-backup PREFIX=/usr install
+override_dh_auto_test:
+	$(MAKE) test-fast
