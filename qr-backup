@@ -835,7 +835,7 @@ def create_tar(input_paths):
 
 def show_help(error=None, special_error=None):
     if error:
-        print(HELP, file=sys.stderr)
+        print(HELP, file=sys.stderr, end='')
         print(file=sys.stderr)
         print("ERROR: {}".format(error), file=sys.stderr)
         if isinstance(special_error, int):
@@ -843,7 +843,7 @@ def show_help(error=None, special_error=None):
         else:
             sys.exit(1)
     else:
-        print(HELP)
+        print(HELP, end='')
         sys.exit(0)
 
 def add_label(image, text, side="bottom", max_fontsize=24, max_width=None, label=None):
@@ -1446,6 +1446,12 @@ def generate_docs(pages):
 
     with open("docs/MAN.txt", "w") as f:
         subprocess.run(["man", "-l", "docs/qr-backup.1.man"], stdout=f, env={"MANWIDTH": "80"})
+
+    with open("docs/USAGE.md", "w") as f:
+        f.write("Output of `qr-backup --help`:\n\n```\n")
+        f.flush()
+        subprocess.run(["./qr-backup", "--help"], stdout=f)
+        f.write("```\n")
 
 def self_test_restore(restore_cmd, input_path, output_path, output_buffer, original_content, use_buffers, sha256sum, use_encryption, encryption_passphrase, expected_qrs):
     if use_encryption:
