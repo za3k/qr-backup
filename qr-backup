@@ -990,7 +990,7 @@ def main_backup(args):
         elif arg == "--error-correction":
             if len(args) < 1:
                 show_help("--error-correction requires one of: L M Q H")
-            error_correction, args = {"L":L, "M": M, "Q": Q, "H": H}[args[0].upper()], args[1:]
+            error_correction, args = {"L": L, "M": M, "Q": Q, "H": H}[args[0].upper()], args[1:]
         elif arg == "--filename":
             if len(args) < 1:
                 show_help("--filename requires one argument")
@@ -1157,7 +1157,7 @@ def main_backup(args):
         "--qr-version", str(qr_version),
         "--dpi", str(dpi),
         "--scale", str(scale),
-        "--error-correction", "LMQH"[error_correction],
+        "--error-correction", {L: "L", M: "M", Q: "Q", H: "H"}[error_correction],
         "--page", str(page_w_points), str(page_h_points),
         '--compress' if use_compression else '--no-compress',
         "--filename", restore_file,
