@@ -9,6 +9,7 @@ People who provided code:
 - [Julian Rüth](https://github.com/saraedum), bugfix
 - [Summer Tea](https://github.com/acuteaangle), nix packaging; continuous integration
 - [tenzap](https://github.com/tenzap), debian packaging
+- [timtr](https://github.com/tim-tx), bugfix
 - [vonProteus](https://github.com/vonProteus), docker support; documentation; OS X testing
 - [VzxPLnHqr](https://github.com/VzxPLnHqr), nix packaging
 
