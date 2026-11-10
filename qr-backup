@@ -588,8 +588,13 @@ def length_encode(data):
     return (prefix + data), (len(prefix), length)
 
 def length_decode(data):
-    length, rest = data.split(b' ', maxsplit=1)
-    length = int(length)
+    try:
+        length, rest = data.split(b' ', maxsplit=1)
+        length = int(length)
+    except ValueError:
+        raise ValueError("Corrupt backup data: invalid length prefix")
+    if length < 0:
+        raise ValueError("Corrupt backup data: invalid length prefix")
     return rest[:length]
 
 def shuffle(qrs):
@@ -1656,7 +1661,11 @@ def do_restore(codes, totals, use_erasure, use_compression, use_encryption, encr
         content = b''.join(decoded[x] for x in expected_codes(codes, totals))
 
     # Remove padding
-    content = length_decode(content)
+    try:
+        content = length_decode(content)
+    except ValueError:
+        logging.fatal("Restored data is corrupt (invalid length prefix). Exiting.")
+        sys.exit(4)
 
     # Decrypt
     if use_encryption is None:
